@@ -1,0 +1,13 @@
+\chapter{Disturbance and Succession Transition Development}
+
+\section{Succession Transitions}
+Many cover types have a probabilistic transition between condition classes. As part of our process and of generating the description documents, I wrote a script to generate a survivorship curve for patches in a given condition class showing their gradual transition to the next stage of development or from open to closed characteristic.
+
+\section{Disturbance Transitions}
+The BPS models described MRI values for each type of fire that could affect a particular condition class. The fire types are high severity, mixed severity, and low severity. Each type of fire, and its FRI, can trigger a transition to a different condition class within the model or have no change at all.
+
+I reinterpreted a significant amount of the BPS models.
+
+An important characteristic of RMLands is that we reject the idea of high, mixed, and low severity fires. Instead, we recognize that all fires form mosaics of burned and unburned land within a given perimeter, and that the severity of these burns varies on a continuous scale. We remain constrained to categorical characterization of fire, but have eliminated mixed severity fires from the model. A mixed severity fire, as it is commonly thought of in land management, would be one fire in the model, with patches assigned to either high or low mortality levels probabilistically. The way I interpreted the BPS models for this particular task is that any fire, regardless of its initial characterization, resulted in a patch transitioning to early development, was designated a high mortality fire. All others were low mortality.
+
+The MRIs given in the BPS models are not true MRIs, as in reality a condition class cannot have an MRI. Because the BPS models were derived from expert opinion and reviewed by experts as well, and are the only comprehensive and cohesive set of data on vegetation transitions in our study area, we elected to utilize them as much as possible. I took the inverse of each given MRI value to generate a probability that could then be compared across condition classes, predicted fire mortality, and vegetation types.

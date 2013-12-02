@@ -1,0 +1,773 @@
+\chapter{Procedures}
+
+\section{General}
+In Raster Calculator, load basic DEM (or any raster layer that is the wrong size). In the Environmental Settings window, set extent to the \emph{vector} polygon layer of the Project Buffer, and the snap raster to the DEM (Lattice\_Clip30m) layer itself (i.e. anchor it)
+
+\section{Create Crest Side Polygon (2/13), redone 7/8}
+Purpose: Draw a line along the Sierran crest so that polygons can be assigned to one or the other, so that ``eastside" vegetation types do not appear on the west side of the crest. I traced the core area polygon border for the relevant part to ensure no eastside types would be able to appear on the westside.
+Note, this was originally done by polygons, with the default for polygons that straddled the crest to be counted as westside types. I later learned how to split all these straddling polygons using the topology toolbox and the Split Polygons tool, so some of these procedures may be redundant. The last step is to manually assign all of the polygons along the crest to east and west, some of which are tiny slivers, so this was time-consuming. I did not come up with a way to automate this, though I'm sure one exists. Unfortunately, even with this change, a few (6) pixels of Yellow Pine still showed up in the core area, most likely due to the use of maximum area when converted the EVeg layer from polygon to raster. The simplest way to fix this is to use the Con tool to look for Yellow Pine pixels within the core area and reassign them to the appropriate value for Oak-Conifer Forest and Woodland. %look for raster calculator how-to of this on computer - rough description from 9 July in notebook
+
+\begin{enumerate}
+\item Load DEM, watershed layers, project area, and buffer into ArcMap document
+\item Create a new polyline feature class
+\item Where DEM/HUC shows that project area runs along the Sierran crest, trace the project area boundary
+\item Elsewhere, use the HUC boundaries and the DEM to determine the crest location, and trace along the HUC boundaries to the edge of the buffer.
+\end{enumerate}
+
+\section{Updating EVeg with FRID values (Access) (2/5/13)}
+\begin{enumerate}
+\item Export EVeg and FRID feature class attribute tables to text files
+\item Import into Access
+\item Design and run Update Queries to populate the PFR, BPS, and new YHR fields
+\item Run Update Query to assign Crest-side
+\item Import tables into ArcMap and join to EVeg layer
+\end{enumerate}
+
+\section{Assign YHR types based on slope position and/or elevation}
+\subsection{LPN}
+\begin{enumerate}
+\item Using select by location, select Lodgepole YHR where the Regional Dominance 2 field is empty/Null and where the cover polygon centroid intersects slope position polygons (separate layer) with value of Low: Assign to Lodgepole Pine Mesic.
+\item Using select by location, select Lodgepole YHR where the Regional Dominance 2 field is empty/Null and where the cover polygon centroid intersects slope position polygons (separate layer) with value of Mid: Assign to Lodgepole Pine Xeric.
+\item Using select by attributes, select Lodgepole YHR where the Regional Dominance 2 field is in (Black Cottonwood, Mountain Alder, Perennial Grasses and Forbs, Quaking Aspen, Wet Meadows, Willow - Alder, Willow (Shrub)): Assign to Lodgepole Mesic
+\item Using select by attributes, select Lodgepole YHR where the Regional Dominance 2 field is in (Basin Sagebrush, Bitterbrush, Bitterbrush - Sagebrush, Greenleaf Manzanita, Lodgepole Pine, Mixed Conifer - Pine, Snowbrush, Upper Montane Mixed Chaparral, Upper Montane Mixed Shrub): Assign to Lodgepole Xeric
+\end{enumerate}
+
+\subsection{RFR}
+\begin{enumerate}
+\item For elevation restrictions, convert the raster elevation layer to a polygon layer that contains the correct elevational break points to be used in the following steps. Do the same for the aspect layer (``west'' vs. ``east'' facing areas).
+\item Using select by location, select Red Fir YHR where cover polygon centroid intersects south-facing polygons: Assign to RFWFJP
+\item Using select by location, select Red Fir YHR where cover polygon centroid intersects north-facing polygons: Assign to RFWWLP
+\item Using select by location, select Red Fir YHR where the cover polygon centroid intersects elevation polygons \textless 7200 feet: Assign to RFWFJP (even if this overwrites previous steps)
+\item Using Select by Location, select Red Fir from EVeg where cover polygon centroid intersects elevation polygons \textgreater7200 feet.
+	\begin{itemize} 
+	\item If Regional Dominance Type 2 is White Fir or Jeffery Pine, assign to RFWFJP.
+	\item If Regional Dominance Type 2 is Western White Pine, Lodgepole Pine, or Mountain Hemlock, assign to RFWWLP
+	\end{itemize}
+\end{enumerate}
+
+\section{Early}
+The original YHR definitions (and BPS, and PFR) included types like chaparral that also manifest as the early serial conditions for forest types like SMC.
+
+Feb 6 - determined the types which were potentially Early conditions were: sagebrush, the chaparral types, curl leaf mountain mahogany, alpine dwarf shrub, and grassland. Some of these sites were clearly the results of logging or mining, solidifying our impression that a patch labeled ``chaparral" in an \emph{existing veg} layer is not necessarily chaparral in a PNV sense. 
+
+Several options for dissolving these types into the surrounding landscape were considered. A standardized method was needed because there were too many polygons in ``early" to do this step manually.
+\begin{itemize}
+\item Attempted to use Dissolve by border tool in ArcMap. This did not work well due to the existence of multiple adjacent polygons that were all included in the set to be dissolved.
+\item The next attempt was to run Eliminate on small polygons (less than 10 acres) in order to get rid of false precision in small patches and odd slivers from prior processing. With this step, however, I was never able to actually eliminate all of the small polygons. We didn't really want to eliminate all the small polygons anyway, so this tactic was abandoned.
+\item I tried several variations on the Dissolve approach - by largest polygon, by edge, by different fields (YHR vs. PFR), but never got rid of all the slivers. As before, we wanted several YHR types to be allowed to remain small, so this tactic was deemed not useful.
+\item Ultimately, I couldn't get rid of the slivers without also potentially eliminating real patches that happened to be small.
+\item A lot of this was probably unnecessary given that the switch to raster is done by majority content in a cell area.
+\end{itemize}
+
+\section{Identifying Permanent Chaparral}
+We hypothesized that permanent chaparral would inhabit places where the soil conditions prohibited the development of trees. Based on this idea, we proposed identifying these sites based on a soil map.
+
+\section{Sliver Removal}
+The EVeg layer had at least three sources, which were merged to generate a complete depiction of the region. Alan completed the work of processing out the slivers that were generated by the edges of different datasets being superimposed on one another.
+
+
+\section{Geoprocessing: Cover Polygon to Cover Raster}
+I designed many iterations of the process for converting the EVeg layer as a polygon to raster. I only present the final version here:
+
+\section{Age layer}
+Becky put together data sheets for the ``Modern Veg" plots so that they could be analyzed in ArcMap. These plots recorded only one age per plot; we do not know exactly how it was calculated. 
+
+A seasonal worked with Becky and Marilyn to transfer stand exam data from 1976-1992 ago into Excel files. Alan then used this data along with maps of the stand exam plots to generate manually a layer with the transcribed tree-level data. He also manually identified ``legacy'' trees that were unlikely to be representative of the stand. I then selected the oldest non-legacy tree from each plot as the representative tree for that plot and created a separate layer containing only these data points. I checked that all the plots in the original dataset were represented in the new one. Four were not, which was due to the fact that they contained only legacy trees. I also conferred with Alan about any questions I had with his designations of legacy trees. In many cases the determination was based on his personal knowledge of the stand and area of the plot.
+
+
+
+I calculated the age as of 2010 for both datasets and merged them. I then ran IDW interpolation to assign an age to each pixel in the landscape. We explored using interpolation by forest type, but we did not have enough data points for this to be effective, especially since many cover types were represented by 0-10 points across the entire landscape. We also acknowledge that the stand exam and modern veg plots do not constitute a true sample and were conducted almost exclusively in mid-mature and mature stands of commercially viable trees, thus skewing the results to some unquantifiable degree.
+
+\subsection{SourceCoverage} Because some of the EVeg data was from 2000, but other parts were from 2005, it was necessary to consider the year when incorporating disturbance factors from 2000 and later. These polygons needed not only for their age to be assigned to 0 for the year of their disturbance, but they also needed to be assigned to the condition class Early Development.
+
+
+\subsection{FACTS} I worked with Alan to identify Forest Activity Tracking System (FACTS) codes that identified stand-replacing disturbance (e.g. clearcutting, seed tree and shelterwood cuts) (see emails from July 22). He then ran a query on the FACTS database to extract polygons that underwent stand-replacing disturbance for the years ???? - 2000 and shared it with me (TNF\_RMLands\_21.gdb). I obtained FACTS polygons for 2000-2012 from the Region 5 website. I calculated the age in 2010 based on difference between the date of disturbance (defined as Date Completed, or if that was absent, then Date Accomplished) and the year 2010 and stored it in a new field. I then converted the polygon layer to raster based on the new age field. In cases of overlapping polygons, the youngest age was prioritized.
+\paragraph{FACTS Codes}
+\begin{itemize}
+\item 4110 Clearcutting
+\item 1180 Fuel Break
+\item 4242 Harvest Without Restocking
+\item 4111 Patch Clearcut (EA/RH/FH)
+\item 4115 Patch Clearcut (w/leave trees) (EA/RH/FH)
+\item 4270 Permanent Land Clearing
+\item 4140 Removal Cut
+\item 4113 Stand Clearcut (EA/RH/FH)
+\item 4114 Stand clearcutting - Salvage Mortality
+\item 4117 Stand Clearcut (w/leave trees) (EA/RH/FH)
+\item 6130 Wildlife Habitat Create openings
+\item 6104 Wildlife Habitat Regeneration cut
+\item 4420 Reforestation Need Caused by Fire
+\item 4403 Reforestation Need Caused by Insect or Disease Agent
+\item 4132 Seed-tree Seed Cut
+\item 4142 Seed-tree Final Cut (EA/NRH/FH)
+\item 4121 Shelterwood Preparatory Cut (EA/RH/NFR)
+\item 4131 Shelterwood Establishment Cut (with or without leave trees) (EA/RH/NFR)
+\item 4112 Strip Clearcutting (EA/RH/FH)
+\end{itemize}
+
+\subsection{Fire History} 
+\begin{enumerate}
+\item Download MTBS burn severity data from the Region Level Datasets page of the Region 5 Geospatial Data website, which is a polygon vector dataset covering 1984-2012.
+\item Clip the full dataset to the project buffer.
+\item Select polygons where \lstinline{BURNSEV} = High, \lstinline{BEST_ASSESS} = YES, and \lstinline{FIRE_YEAR} \textless 2011.
+\item Convert polygon to raster (selected features only), clipping to rasterized buffer layer.
+\end{enumerate}
+
+
+\subsection{Early} Any pixels that were originally assigned to ``Early" (and therefore Nibbled into adjoining cover types) were reassigned to the midpoint of the age range for Early Development allowed for that cover type.
+\begin{enumerate}
+    \item Select where condition is early and original YHR is ADS, MCH, MCP.
+    \item Convert to raster (now all Early types have value 1)
+    \item Update for NoData dummy variables
+    \item Combine to find out new veg type assignment for 1s.
+    \item Make new field and wherever Early Chaparral was present (value = 1) determine new age by entering mean of Early age values for that cover-condition combination. For static classes, enter 20. Aspen types have to be 0 since early aspen only lasts 10 years. If mean is odd, round up.
+    \item Then run Lookup on this new age field 
+\end{enumerate}
+
+\subsection{Combining Layers}
+\begin{enumerate}
+\item Convert EVeg polygon layer to raster based on SourceCoverage field
+\item Use Con to isolate 2000 updated data and 2005 updated data into two separate layers.
+\item Run Combine tool on Fire History, FACTS, and 2000/2005 area rasters.
+\item Use Raster Calculator to burn in Early Development patches
+\end{enumerate}
+
+OR 
+
+Age Processing Notes from 6 August
+\begin{enumerate}
+\item Update condition class grid for disturbance (Fire, FACTS)
+\item Update Ages to 2010 values
+\item Interpolate using IDW tool
+\item Overwrite ages for areas disturbed since the surveys were done
+\end{enumerate}
+
+OR
+
+\begin{enumerate} 
+\item Can't just use current version
+    \begin{enumerate}
+        \item Take only FACTS and Fire History polygons from 2000-2010.
+        \item Use Con(IsNull) function to convert NoData in above layers to 999
+        \item Convert EVeg to raster based on Source Coverage field
+        \item Combine layers: Fire w/dummy, FACTS w/dummy, EVeg Source Cov Year
+        \item Add field to new raster attribute table. Assign 1 to fields where 2010 condition is Early Development; else 0.
+        \item Use Raster Calculator: Con(Lookup("Combine", ``Early'') == 1, 11, ``CondClass")
+        \item New grid: \lstinline{CondClassAmend_0806_1727}
+    \end{enumerate}
+\item Update Age to 2010 values:
+    \begin{enumerate}
+        \item Ecology plots: Join shapefile to ``Copy of Pendola Eco PLots'' sent on 7/30/13 and exported as new layer (103 data points)
+        \item Make \lstinline{Age_2010} field and calculate
+        \item Delete rows with an error or unrealistic number for Age (96 data points)
+        \item Compartment plots: incorporated some changes from Alan re: legacy trees
+        \item Calculated 2010 Age
+        \item filled \lstinline{Rep_Tree_Age} anew
+        \item Exported rep tree points (1310 data points)
+        \item Merge the two datasets: \lstinline{Age_Merge} (406 points)
+        \item Populate new \lstinline{Age_2010} and \lstinline{SurveyDate} fields
+    \end{enumerate}
+\item Interpolate Age
+    \begin{enumerate}
+    \item Run IDW on \lstinline{Age_2010} field
+    \item Round to 10s
+    \item Use Con to assign 99998 to cells outside the buffer
+    \end{enumerate}
+\item Overwrite recently disturbed areas
+    \begin{enumerate}
+    \item Calculate 2010 Ages for all Fire, FACTS
+    \item Convert all to rasters
+    \item Set NoData to 9999 so I can combine
+    \item Didn't work - made new age colum and used Lookup on age field
+    \end{enumerate}
+\end{enumerate}
+
+OR
+
+\begin{enumerate}
+    \item Fire: Take Veg Severity Polygon and select high, best and convert to raster. Clip raster to buffer raster. Add field for Age, then run lookup to make new Fire layer.
+    \item Source Coverage: Convert EVeg polygon to raster based on Source Coverage field. Add field, input year, run Lookup on new field.
+    \item FACTS: Union the pre-2002 and post-2002 polygon layers. Convert to raster. Clip to buffer.
+    \item Add dummy variables for NoData in Fire and FACTS.
+    \item Combine the 3 layers.
+    \item For pixels with Source Coverage = 2000, age must be $\leq$ 10
+    \item For pixels with Source Coverage = 2005, age must be $\leq$ 5
+    \item Add new field for Recent Mortality and run Lookup.
+    \item Now combine that w/ condition layer to ``burn in'' early.
+    \item Then take \lstinline{IDW_cb_10s_0809_1905} and isolate High Mortality ages to get most recent. Then run Lookup again on new Age field.
+\end{enumerate}
+
+OR
+
+\begin{enumerate}
+    \item To build Age layer there are 3 sources: the IDW ages, the chaparral ages, and the FACTS/Fire (disturbance)-generated age. Their order of precedence is Dist \textrightarrow Chap \textrightarrow IDW.
+    \item Round disturbance to 10s place
+    \item Combine IDW, Chap, Disturbance
+    \item Add field for Age
+    \item Use IDW value if Chap = -1 and Dist = -1
+    \item Use Chap if Dist = -1
+    \item Use Dist if Chap = -1
+    \item Use both if Chap = Dist and neither = -1
+    \item If Dist \textless Chap, use Dist
+    \item If Dist \textgreater Chap, still use Dist (actual, not projected value)
+    \item Run Lookup on age field
+\end{enumerate}
+
+
+After the interpolated age was updated with information from FACTS and fire history, I converted all ages to even 10s so that the age would match the time step scheme of the model. To do this, I used Raster Calculator to convert ages to integers and round to the nearest 10s place.
+
+A initial analysis of the resulting age distribution showed a lot of mismatches between the final age values and the allowed age for the assigned condition class. I created a Python script to look up the allowed age range for a given cover-condition combination, and adjust the age of any pixel out-of-bounds by lowering it to the highest age allowed for that condition if the original age was too high, or the lowest allowed age if the original age was too low. 
+
+As part of this project, I also created a csv file that include cover, condition, min age, and max age fields for use as a lookup table.
+
+
+\section{Creating Succession Plots}
+I wrote a Python script for each cover type and condition. Looking back, it wasn't the most efficient, but it was within my capabilities at the time.
+\lstset{language=Python}
+\begin{lstlisting}
+import numpy as np
+import matplotlib.pyplot as plt
+
+def ed_trans_prob(*args):
+
+    # Input Variables:
+    # PS = prob_succession : probability of succession per timestep
+    # SL = stage_length : maximum time spent in stage :
+    #      equal to ``after X years'' (consider changing text to ``by X years''
+    # SY = start_year : year in stage at which probability of succession
+    #      is implemented : subtract 10 from ``begin transition after X years''
+    tau = 10
+    # AS : age range during which succession can take place
+    for label, PS, SY, SL in args:
+        AS = np.arange(0, SL + 3*tau, tau)
+        if PS < 1:
+           transition_prob = (1 - PS) ** ((AS - SY) / tau)
+        elif PS == 1:
+            transition_prob = np.zeros_like(AS)
+        transition_prob[AS <= SY] = 1
+        transition_prob[AS >= SL] = 0
+        plt.plot(AS, transition_prob, label=label)
+    plt.title("Transition Probability for SMC, Early Development")
+    plt.xlabel(``Years in Stage")
+    plt.ylabel(``Probability of patch remaining in Early Development")
+    plt.legend()
+\end{lstlisting}
+
+We began with values for the start and end times of each stage, and theorized transition rates. Where the transition rate did not make sense for the range of transition-eligible time steps, I adjusted the transition rate to fit.
+
+\section{Condition Assignment}
+The general methodology of condition assignment is explained in Chapter 1. To implement the rules described in the description documents, I exported the attribute table for the EVeg layer into Access and ran a series of SQL queries (saved in ``ConditionClasses.xlsx'') to assign condition class for each landcover type. I did have to change all empty fields to Null. On occasion, polygons would be assigned an ``N" for 	``non-stocked," meaning \textless 16.7\% forest stocking, which is not necessarily barren. I resolved this by assigning all polygons with an ``N" attribute to Early Development. 
+
+\section{Cover  Subtypes Layer}
+\subsection{Xeric-Mesic Gradient}
+\paragraph{Aspect} I used the Aspect tool in ArcMap to create an aspect layer from the original DEM, taking care to snap the output layer to the DEM grid. Next I rescaled it from -1 (SW) to +1 (NE) in Raster Calculator using Cos((``Aspect Layer" - 45)/Radians). Then standardized the data into a z-score grid.
+\paragraph{PET, STOR} I used the layers given to us by the UC Davis team. I also standardized these datasets into z-score grids.
+\paragraph{TWI} I used the TWI tool from the special Sam Cushman toolbox to generate a TWI layer. Then I used the Focal Statistics tool with a moving window of 5. This grid was then transformed into a z-score grid.
+\paragraph{Combination} I used Raster Calculator to add together the z-score grids using the following formula: Aspect + TWI + STOR - PET. For Aspect, TWI, and STOR, high values are associated with theoretically mesic environments. However, high PET values are associated with xeric environments, so we dealt with this by subtracting this value from our total. Since each layer ranged from negative to positive values, it was not meaningful to compute a new average. Finally, I used to Con tool to assign all pixels to values of either 0 (mesic) or 1 (xeric) using the break point of + 1 standard deviation.
+
+\subsection{Ultramafic}
+I converted the 100,000 scale geology layer from the USGS (the Forest Service layer was not complete for the study area) to raster format, retaining only the polygons/pixels that were identified as ultramafic in the original attribute table. I then used the Con tool to assign all ultramafic pixels a value of 2. 
+
+\subsection{Combining Layers}
+I used the Con tool within Raster Calculator to burn the ultramafic layer on top of the xeric/mesic layer by taking advantage of the ability to prioritize pixel assignments with nested Con statements. Then I used the Con tool to assign pixels outside of the buffer boundary to NoData.
+
+\subsection{Cover-Condition Layer Congruity Check}
+I \emph{think} that the need for this went away when I switched from ``maximum combined area" to ``maximum area" for raster conversion. Written up on 18 July. 
+
+\section{Overall Geoprocesing Sequence}
+\begin{enumerate}
+\item Project boundary and buffer
+\item EVeg poly 0708\_1545 is the most recent polygon layer (Crest Side, YHR, etc should be up to date) following protocol from July 29
+    \begin{enumerate}
+        \item Becky said the proportion of Curl-leaf Mountain Mahogany in each condition class Early:Mid:Late is probably 20:10:70.
+            \begin{enumerate}
+            \item Sorted polygons by ObjectID in descending order
+            \item Generated random numbers between 0 and 1 with Python using numpy random.random(9)
+            \item Use random numbers to assign early-mid-late as follows:
+                \begin{enumerate}
+                    \item Early: 0-0.2
+                    \item Mid: 0.2-0.3
+                    \item Late: 0.3-1.0
+                \end{enumerate} 
+            \item Generated following random numbers:
+                \begin{enumerate}
+                    \item 0.856 \textrightarrow Late
+                    \item 0.450 \textrightarrow Late
+                    \item 0.798 \textrightarrow Late
+                    \item 0.596 \textrightarrow Late
+                    \item 0.005 \textrightarrow Early
+                    \item 0.006 \textrightarrow Early
+                    \item 0.843 \textrightarrow Late
+                    \item 0.807 \textrightarrow Late
+                    \item 0.230 \textrightarrow Mid
+                \end{enumerate}
+            \end{enumerate}
+
+        \item Created \lstinline{Landcover_0808_1619} (Snapped to project buffer)
+        \item Nibble Early, Road: \lstset{language=SQL}
+        \begin{lstlisting} 
+        Con("Landcover_0808_1619","Landcover_0808_1619", Nibble("Landcover_0808_1619", SetNull("Landcover_0808_1619","Landcover_0808_1619", "VALUE NOT IN (1,2,3,6,7,15,16,17,18,19,20,21,22)")), "VALUE IN (5,8,9,11,12,13,14)") 
+        \end{lstlisting} \lstset{language=Python}
+            Results:
+            \begin{verbatim} 
+Landcover Codes and Value
+Value   Count   AYHR9
+1       169443  DFTO
+2       528773  OCFW
+3       2449410 SMC
+4       299795  EARLY
+5       25937   URB
+6       133234  MHW
+7       9150    OAK
+8       38826   GRASS
+9       98353   BAR
+10      3336    ROAD
+11      64591   WAT
+12      63745   AGR
+13      35032   MRIP
+14      14040   MED
+15      280805  RFR
+16      30121   LPN
+17      20646   SCN
+18      4902    WWP
+19      112147  YPN
+20      18332   SAGE
+21      457     CMM
+22      53      LSG
+            \end{verbatim}
+        \item Combine Cover, Aspen, Streams, Meadow layers (must all have dummy variables for NoData)
+        \item Create new YHR attribute field
+        \item Populate new YHR field based on the following priority: Streams, Aspen, Meadow, Cover. Create codes for aspen layers.
+                \begin{verbatim}
+30  SMC-ASP
+31  RFR-ASP
+32  LPN-ASP
+33  SCN-ASP
+34  YPN-ASP
+\end{verbatim}
+        \item Nibble to overwrite where Aspen overlapped non-allowed cover types (e.g. barren, meadow, grass)
+        \lstset{language=SQL, showstringspaces=false} 
+        \begin{lstlisting}
+Con("LandcoverCombine_0808_1710", "LandcoverCombine_0808_1710", Nibble("LandcoverCombine_0808_1710", SetNull("LandcoverCombine_0808_1710","LandcoverCombine_0808_1710", "VALUE NOT IN (30,31,32,33,34)")), "VALUE IN (1,2,3,5,6,7,8,9,11,12,13,14,15,16,17,18,19,20,21,22)") 
+        \end{lstlisting} \lstset{language=Python}
+        \item Run Lookup on the new YHR field: \lstinline{Landcover_0808_1725}
+        \item The STOR and PET values from UC Davis did not reach the outer extent of the buffer. Consequently, need to reprocess the modifiers layer to fill the boundary.
+        \begin{enumerate}
+        \item Give NoData cells in modifiers layer a dummy value of 99:  \begin{lstlisting}
+Con(IsNull("Modifiers_062613_1705") == 1, 99, "Modifiers_062613_1705") \end{lstlisting}
+        \item Use Nibble to fill in gaps between edge of zscore layer and edge of buffer: \begin{lstlisting}
+Con("ProjectBoundary_10kbuff_0808_1525" == 1, Nibble(Con(IsNull("Modifiers_062613_1705") == 1, 99, "Modifiers_062613_1705"), "Modifiers_062613_1705", "DATA_ONLY")) \end{lstlisting}
+        \end{enumerate}
+    \item Combine Modifiers and Landcover Layer.
+    \item Use Lookup to Reclass by YHR, then sort alphabetically, number and use Lookup again.
+    \item A few NoData pixels were found and fixed with a Raster Calculator miniscript:
+    \begin{lstlisting}
+Con("ProjectBoundary_10kbuff_0808_1525" == 1, Nibble(Con(IsNull("Landcover_0808_2150") == 1, 99, "Landcover_0808_2150"), "Landcover_0808_2150", "DATA_ONLY")) \end{lstlisting}
+    \end{enumerate}
+\item Condition Class
+    \begin{enumerate}
+        \item Convert polygon layer to raster, snapping to DEM, using maximum area, output projection of NAD 83 Zone 10N.
+        \item Nibble to expand to fill gaps in buffer area:
+        \begin{lstlisting}
+Con("ProjectBoundary_10kbuff_0808_1525" == 1, Nibble(Con(IsNull("ConditionClass_0808_1622") == 1, 99, "ConditionClass_0808_1622"), "ConditionClass_0808_1622", "DATA_ONLY")) \end{lstlisting}
+        \item Convert Aspen layer to raster based on condition class
+        \item Nibble aspen condition class as well:
+        \begin{lstlisting}
+Con(IsNull("AspenCondClass_0808_2227") == 1, 99, "AspenCondClass_0808_2227") \end{lstlisting}
+        \item Use Con to privilege Aspen before EVeg
+        \item Condition raster values 
+        \begin{verbatim}
+1       LATE_ALL
+2       MID_CL
+3       MID_ALL
+4       LATE_CL
+5       MID_OP
+6       EARLY_ALL
+7       STATIC
+8       LATE_OP
+11      MID_AC
+12      LATE_CL (ASP)
+13      LATE_CA 
+14      MID_ASP
+15      EARLY_ASP
+        \end{verbatim}
+        \item Combine cover, condition rasters
+        \item Add new attribute field to test, and input revised condition class value. Any cover and condition class pixel that do not agree/are illegal are given a condition value of 99 (cover layer is assumed to be correct and condition layer is corrected to match)
+        \item 2907 incorrect pixels: Run Nibble to fix.
+        \begin{lstlisting}
+Con("CondClass_Update_0809_1350","CondClass_Update_0809_1350", Nibble("CondClass_Update_0809_1350", SetNull("CondClass_Update_0809_1350","CondClass_Update_0809_1350", "VALUE NOT IN (1,2,3,4,5,6,8,11,12,13,14,15)")), "VALUE IN (7)") \end{lstlisting}
+        \item Combine new condition class layer with cover layer again. 71 incorrect pixels remain. Rerun Nibble.
+        \begin{lstlisting}
+Con("CondClass_update2_0809_1424","CondClass_update2_0809_1424", Nibble("CondClass_update2_0809_1424", SetNull("CondClass_update2_0809_1424","CondClass_update2_0809_1424", "VALUE NOT IN (1,2,3,4,5,6,8,11,12,13,14,15)")), "VALUE IN (7)") \end{lstlisting}
+        \item Combine new condition class layer with cover layer again. 69 incorrect pixels remain. Analyze characteristics of remaining incorrect pixels. Result is that all remaining error is SMC with mid or late all (has to be open or closed) or OCFW with mid all (has to be open or closed). The solution is to let only SMC types to Nibble the last time.
+        \begin{lstlisting}
+Con("CondClass_Update3_0809_1459","CondClass_Update3_0809_1459", Nibble("CondClass_Update3_0809_1459", SetNull("CondClass_Update3_0809_1459","CondClass_Update3_0809_1459", "VALUE NOT IN (2,4,5,6,8)")), "VALUE IN (1,3,7,11,12,13,14,15)") \end{lstlisting}
+        \item Run another combine to verify; all fields valid.
+        \item On a second time through this the OCFW were left. I assigned them to Mid Open since Mid Closed is supposed to be rare.
+        \item Reclassify condition raster to new values by adding new field to attribute table, correctly populating, and then use Lookup to generate the new raster layer.
+        \begin{verbatim}
+0   Non-seral
+10  EARLY_ALL
+20  MID_ALL
+21  MID_CL
+22  MID_OP
+30  LATE_ALL
+31  LATE_CL
+32  LATE_OP
+40  EARLY_ASP
+41  MID_ASP
+42  MID_AC
+43  LATE_CA
+        \end{verbatim}
+        \item Burn in early by running Combine on cover, condition, and high mortality fire layers. Assign cells to Early Aspen, Early All, or Static.
+        \begin{lstlisting}
+Con("ProjectBoundary_10kbuff_0808_1525" == 1, Nibble(Con(IsNull("EarlyChap_0814_1749") == 1, 99, "EarlyChap_0814_1749"), "EarlyChap_0814_1749", "DATA_ONLY")) \end{lstlisting}
+    \end{enumerate}
+    \item Streams layer
+        \begin{enumerate}
+        \item Take streams raster layer and assign dummy value to NoData:
+        \begin{lstlisting}
+Con(IsNull("Streams_0809_1607") == 1, 99999, "Streams_0809_1607") \end{lstlisting}
+        \item Clip so that pixels with data match project buffer raster.
+        \begin{lstlisting}
+Con("ProjectBoundary_10kbuff_0808_1525" == 1, Con(IsNull("Streams_0809_1607") == 1, 99999, "Streams_0809_1607")) \end{lstlisting}
+        \end{enumerate}
+    \item Slope
+    \begin{enumerate}
+    \item Use Slope tool to generate initial raster
+    \item Clip to project boundary. Round slope values. Reclassify values greater than 126.
+    \begin{lstlisting} 
+Con("ProjectBoundary_10kbuff_0808_1525" == 1, Con(Int("Slope_0809_1614" + 0.5) > 126, 126, Int("Slope_0809_1614" + 0.5)))
+ \end{lstlisting}
+    \end{enumerate}
+    \item Age
+    \begin{enumerate}
+    \item Convert Veg Burn Severity layer (best assessment, high severity) to raster, NoData to dummy.
+    \begin{lstlisting}
+Con(IsNull(Lookup("HMFire_0809_1808", "Age_2010")) == 1, 9999, Lookup("HMFire_0809_1808", "Age_2010")) \end{lstlisting}
+    \item FACTS through 2002 (1960-1998)
+    \begin{lstlisting}
+Con(IsNull(Lookup("FACTS_thru2002_HM_0809_1813", "Age_2010")) == 1, 9999, Lookup("FACTS_thru2002_HM_0809_1813", "Age_2010")) \end{lstlisting}
+    \item FACTS through 2012 (2004-2010)
+    \begin{lstlisting}
+Con(IsNull(Lookup("FACTS_thru2012_HM_0809_1821", "Age2010")) == 1, 9999, Lookup("FACTS_thru2012_HM_0809_1821", "Age2010")) \end{lstlisting}
+    \item Burn in Fire, FACTS to condition class (as early)
+    \item Using \lstinline{Age_Merge+0807_1153}, redo IDW, then clip to buffer and round values to 10s place to create \lstinline{IDW_cb_10s_0809_1905}
+    \item Isolated high mortality ages, determined the youngest ones. Burned in known ages. \begin{lstlisting}
+Con((Lookup("Combine_HMEvents_0809_1929", "Youngest")) < 1000, "Combine_HMEvents_0809_1929", "IDW_cb_10s_0809_1905") \end{lstlisting}
+    \item Round to 10s again. \lstinline{Int((("Age_Updated_0809_1935" + 5) / 10)) * 10}
+    \end{enumerate}
+\end{enumerate}
+
+\section{Age Scripts}
+\begin{lstlisting}
+# Create revised age layer that fits allowed values
+agearray = np.genfromtxt("agegrids/age_0815_1153.txt", dtype = None, skip_header = 6)
+covarray = np.genfromtxt("agegrids/cover_0815_1142.txt", dtype = None, skip_header = 6)
+condarray = np.genfromtxt("agegrids/condclass_0905_1302.txt", dtype = None, skip_header = 6)
+
+lookup = np.genfromtxt('agelookuptable.csv', names=True, delimiter=',', dtype="S9,int,S9,int,int,int")
+
+revisedagearray = np.genfromtxt("agegrids/revised_ages_0905.txt", dtype = None, skip_header = 6)
+oldagearray = np.genfromtxt("agegrids/revised_ages_0815.txt", dtype = None, skip_header = 6)
+
+for row in lookup:
+    cov = row['CoverCode']
+    cond = row['ConditionCode']
+    minage = row['Min_Age']
+    maxage = row['Max_Age']
+    covcond_combo = (covarray == cov) & (condarray == cond) & (agearray >= 0)
+    ages = agearray[covcond_combo]
+    ages_clip = np.clip(ages, minage, maxage)
+    np.place(agearray, covcond_combo, ages_clip)
+    print "writing " + row['Cover'] + " " + row['Condition'] + " to array."
+    myheader = '''ncols         4506
+nrows         3212
+xllcorner     614891.22333361
+yllcorner     4333092.4910081
+cellsize      30
+NODATA_value  -9999'''
+np.savetxt("agegrids/revised_ages_0905.txt", agearray, fmt='%d', header=myheader, comments = '')
+
+%[flag]width[.precision]specifier
+
+======================================================
+
+# Create Condition-Age
+# Condition-Age is the # of years in that condition class
+# We decided to make everything the youngest it could be, so this function needs to take the current age
+# and subtract the min age. Thus if a pixel is LPN MDC and 50 years old, and the minimum age for MDC is 10,
+# then the condition-age will be 40. 
+
+#So we need to load the revisedagearray, covarray, and condarray at the top of this document, as well as the lookup
+
+agearray = np.genfromtxt("agegrids/age_0815_1153.txt", dtype = None, skip_header = 6)
+covarray = np.genfromtxt("agegrids/cover_0815_1142.txt", dtype = None, skip_header = 6)
+condarray = np.genfromtxt("agegrids/condclass_0905_1302.txt", dtype = None, skip_header = 6)
+
+lookup = np.genfromtxt('agelookuptable.csv', names=True, delimiter=',', dtype="S9,int,S9,int,int,int")
+
+revisedagearray = np.genfromtxt("agegrids/revised_ages_0905.txt", dtype = None, skip_header = 6)
+
+
+for row in lookup:
+    cov = row['CoverCode']
+    cond = row['ConditionCode']
+    minage = row['Min_Age']
+    if minage == 9998:
+        continue 
+    covcond_combo = (covarray == cov) & (condarray == cond)
+    ages = revisedagearray[covcond_combo]
+    condages = ages - minage
+    np.place(revisedagearray, covcond_combo, condages)
+    print "writing " + row['Cover'] + " " + row['Condition'] + " to array."
+
+myheader = '''ncols         4506
+nrows         3212
+xllcorner     614891.22333361
+yllcorner     4333092.4910081
+cellsize      30
+NODATA_value  -9999'''
+np.savetxt("agegrids/condage_0905.txt", revisedagearray, fmt='%d', header=myheader, comments = '')
+
+========================================================
+
+# Generate plots for revised age array
+
+for row in lookup:
+    cov = row['CoverCode']
+    cond = row['ConditionCode']
+    ages = revisedagearray[(covarray == cov) & (condarray == cond) & (revisedagearray >= 0)]
+    if ages.size > 0:
+        figure()
+        title(','.join([row['Cover'],row['Condition']]))
+        hist(ages, bins = 20)
+        #plot(row['Min_Age'],0,'ro')
+        axvline(x=row['Min_Age'], color = 'r', ls = '--')
+        #plot(row['Min_Age'], 0, '-')
+        #plot(x,y,'o', x,a*x+b,'-')
+        #scatter(row['Min_Age'],100)
+        if row['Max_Age'] < 9999:
+            #plot(row['Max_Age'],100,'ro')
+            axvline(x=row['Max_Age'], color = 'r', ls = '--')
+        elif row['Max_Age'] == 9999:
+            axvline(x=500, color = 'r', ls = '--')
+            #scatter(row['Max_Age'],100)
+        #axvline(x=row['Max_Age'], color = 'r', ls = '--')
+        savefig('covcondage_plots/ages_hist_'+'_'.join([row['Cover'],row['Condition']])+'.png')     
+\end{lstlisting}
+
+The proportion of area reverted to a real age based on Fire or FACTS disturbance data is 27.76\%.
+
+\section{Geoprocessing 11/29/13}
+Creating input layers
+Raster Processing: Clip Lattice\_Clip30m
+\begin{enumerate}
+\item Step 1: Cover
+    \begin{enumerate}
+    \item \lstinline{EVeg_070813_1545} has gone through topology cutting to ensure no YPN within the Core Area, and has ROAD and EARLY classified. 
+    \item Polygon to Raster; Value field = AYHR9; Cell Assignment = Maximum Area, Cellsize = 30, Environment Settings: Snap Raster, Processing Extent = \lstinline{Clip Lattice_Clip30m} (output raster = 2905, 2244)
+    \begin{verbatim} 
+Landcover Codes and Value
+Value   Count       AYHR9
+1       169497      DFTO
+2       529316      OCFW
+3       2448039     SMC
+4       300444      EARLY
+5       25917       URB
+6       133408      MHW
+7       9201        OAK
+8       38854       GRASS
+9       98461       BAR
+10      3331        ROAD
+11      64651       WAT
+12      63706       AGR
+13      35166       MRIP
+14      14058       MED
+15      280608      RFR
+16      30265       LPN
+17      20555       SCN
+18      4905        WWP
+19      111830      YPN
+20      18309       SAGE
+21      456         CMM
+22      61          LSG
+    \end{verbatim}
+    \item Nibble Early, Road using Raster Calculator: \lstset{language=SQL}
+    \begin{lstlisting}
+    Con("Landcover_Poly2Raster_1603","Landcover_Poly2Raster_1603", Nibble("Landcover_Poly2Raster_1603", SetNull("Landcover_Poly2Raster_1603","Landcover_Poly2Raster_1603", "VALUE NOT IN (1,2,3,6,7,15,16,17,18,19,20,21,22)")), "VALUE IN (5,8,9,11,12,13,14)") 
+    \end{lstlisting}
+    \begin{verbatim} 
+Landcover Codes and Value
+Value   Count       AYHR9
+1       172363      DFTO
+2       566708      OCFW
+3       2632476     SMC
+5       26003       URB
+6       142330      MHW
+7       9869        OAK
+8       38928       GRASS
+9       98529       BAR
+11      64731       WAT
+12      63748       AGR
+13      35192       MRIP
+14      14082       MED
+15      336112      RFR
+16      34133       LPN
+17      22805       SCN
+18      5669        WWP
+19      118126      YPN
+20      18735       SAGE
+21      459         CMM
+22      54          LSG
+    \end{verbatim}
+    \item Remove Yellow Pine from Core area
+        \begin{enumerate}
+        \item Clip Landcover to Core area in Raster Calculator 
+        \begin{lstlisting}
+        Con("CoreBuffer_0822_1148" == 1, "Nibble410_1608") 
+        \end{lstlisting}
+        \item Nibble YPN (value=19) in Raster Calculator \begin{lstlisting}
+        Con("CoverCore_1713","CoverCore_1713", Nibble("CoverCore_1713", SetNull("CoverCore_1713","CoverCore_1713", "VALUE NOT IN (1,2,3,6,7,15,16,17,18,20,21,22)")), "VALUE IN (5,8,9,11,12,13,14)") \end{lstlisting}
+        \item Use Con to put the cover layer back together in Raster Calculator \begin{lstlisting}
+        Con("CoreBuffer_0822_1148" == 1, "NibbleYPN_1717", "Nibble410_1608")\end{lstlisting}
+        \end{enumerate}
+    \item Prep Aspen, Streams, Meadows, Cover
+        \begin{enumerate}
+        \item Select 1st order streams, convert Polyline to Raster, use Environment Settings as assigned above (output=\lstinline{Streams_1stOrder_1129_1633})
+        \item Add NoData values using Raster Calculator \begin{lstlisting}
+        Con(IsNull("Streams_1stOrder_1129_1633") == 1, 99999, "Streams_1stOrder_1129_1633") \end{lstlisting}
+        \item Convert Aspen Polgon to Raster, use Environment Settings as assigned above (output = \lstinline{Aspen_Poly2Raster_1129_1656})
+        \item Add NoData values using Raster Calculator \begin{lstlisting}
+        Con(IsNull("Aspen_Poly2Raster_1129_1656") == 1, 99999, "Aspen_Poly2Raster_1129_1656") \end{lstlisting}
+        \item Convert Meadow Polygons to Raster, use Environment Settings as assigned above (output = \lstinline{Meadow_Poly2Raster_1129_1703})
+        \item Add NoData values using Raster Calculator \begin{lstlisting}
+        Con(IsNull("Meadow_Poly2Raster_1129_1703") == 1, 99999, "Meadow_Poly2Raster_1129_1703") \end{lstlisting}
+        \item Add NoData values to Cover using Raster Calculator \begin{lstlisting}
+        Con(IsNull("Cover_NoYPN_1731") == 1, 99999, "Cover_NoYPN_1731") \end{lstlisting}
+        \end{enumerate}
+    \item Combine Cover, Aspen, Streams, Meadows. Note, this serves as a check that everything is aligned because the function will fail if they are not.
+        \begin{enumerate}
+        \item Populate new YHR field based on the following priority: Streams, Aspen, Meadow, Cover. Create codes for aspen layers.\\
+        Streams \textrightarrow 11 (WAT)\\
+        Aspen \textrightarrow new values
+        \begin{verbatim}
+30  SMC-ASP
+31  RFR-ASP
+32  LPN-ASP
+33  SCN-ASP
+34  YPN-ASP
+\end{verbatim}
+    Meadow \textrightarrow 14 (MED)
+        \item Run Lookup on new YHR field
+        \end{enumerate}
+    \item Use Raster Calculator and nibble to overwrite where Aspen overlapped non-allowed cover types (e.g. barren, meadow, grass) (output = \lstinline{NibbleforAspen_1757})
+    \begin{lstlisting}
+    Con("Lookup_Combine_1753", "Lookup_Combine_1753", Nibble("Lookup_Combine_1753", SetNull("Lookup_Combine_1753","Lookup_Combine_1753", "VALUE NOT IN (30,31,32,33,34)")), "VALUE IN (1,2,3,5,6,7,8,9,11,12,13,14,15,16,17,18,19,20,21,22,9999)") 
+    \end{lstlisting}
+    \item Use Reclassify tool to eliminate cover value 99999
+    \item Use Raster Calculator to expand cover layer into buffer \begin{lstlisting}
+    Con("CoreBuffer_0822_1148" > 0, Nibble(Con(IsNull("Reclass_Cover_1854") == 1, 99, "Reclass_Cover_1854"), "Reclass_Cover_1854", "DATA_ONLY")) \end{lstlisting}
+    \item Combine Modifiers layer with landcover layer. DFTO, OCFW, MHW, may be ultramafic. SMC, RFR, may be xeric, mesic, or ultramafic. Note, from modifiers layer 0 = xeric, 1 = mesic, 2 = ultramafic.
+    \begin{enumerate}
+        \item Create text field for new YHR types. Use abbreviations rather than numbers.
+        \item Sort new YHR field alphabetically. Number in alphabetical order. Run lookup on the field.
+        \begin{verbatim}
+Value   Count       YHR
+1       60583       AGR
+2       98513       BAR
+3       454         CMM
+4       160071      DFTO
+5       12916       DFTO_U
+6       35201       GRASS
+7       31509       LPN
+8       350         LPN_ASP
+9       56          LSG
+10      38262       MED
+11      144703      MHW
+12      6331        MHW_U
+13      24584       MRIP
+14      25093       OAK
+15      582390      OCFW
+16      23489       OCFW_U
+17      397         RFR_ASP
+18      218606      RFR_M
+19      3585        RFR_U
+20      110842      RFR_X
+21      17898       SAGE
+22      22616       SCN
+23      66          SCN_ASP
+24      1389        SMC_ASP
+25      1490469     SMC_M
+26      108939      SMC_U
+27      1016747     SMC_X
+28      26178       URB
+29      163773      WAT
+30      5641        WWP
+31      117312      YPN
+32      31          YPN_ASP
+\end{verbatim}
+        \end{enumerate}
+    \end{enumerate}
+    \item Step 2: Condition
+    \begin{enumerate}
+        \item \lstinline{EVeg_070813_1545} has been updated with appropriate condition class values. (CMM Late All, etc)
+        \item Convert EVeg and Aspen polygon layers to raster. Use Maximum Area and 30m pixel sizeEnviromental Settings should be the same as above (extent and snap raster set to \lstinline{Lattice_30mClip_Clip}).
+        \begin{verbatim}
+Value   Condition Class
+1       Late All
+2       Mid Closed
+3       Mid All
+4       Late Closed
+5       Mid Open
+6       Early All
+7       Static
+8       Late Open
+
+10      MID_AC
+20      LATE_CL
+30      LATE_CA
+40      MID_ASP
+50      EARLY_ASP
+        \end{verbatim}
+        \begin{enumerate}
+            \item Nibble to expand to fill gaps in buffer area for both condition layers:
+            \begin{lstlisting}
+Con("CoreBuffer_0822_1148" > 0, Nibble(Con(IsNull("ConditionPoly2Raster_1130_1608") == 1, 99, "ConditionPoly2Raster_1130_1608"), "ConditionPoly2Raster_1130_1608", "DATA_ONLY")) \end{lstlisting}
+            \item Use Raster Cacluator to make Null values within buffer 99 and to multiply aspen values by 10. \begin{lstlisting}
+Con(IsNull("AspenConditionPoly2Raster_1130_1613") == 1, 99, "AspenConditionPoly2Raster_1130_1613" * 10)
+            \end{lstlisting}
+        \end{enumerate}
+        \item Use Raster Calculator and Con to combine Aspen with EVeg, privileging the Aspen layer. \begin{lstlisting}
+Con("AspenCond_NoData_1130_1715" < 60, "AspenCond_NoData_1130_1715", "NibbleCondition_1130_1655") \end{lstlisting}
+        \item Ensure accuracy between condition and cover layers.
+        \begin{enumerate}
+            \item Combine new condition raster with completed cover raster.     
+            \item Add new attribute field for revisions. In cases where there is a mismatch, the cover raster takes precedence. If a simple change can be made (e.g. assigning mid-closed to static for cover type AGR, do so). Otherwise, mark with 99 to use Nibble to revise.
+            \item Run Lookup on new condition field. 2571 pixels are in 99 (error)
+            \item Use Raster Calculator and Nibble to overwrite pixels with value = 99. \begin{lstlisting}
+Con("Lookup_CovCond_1130_1808","Lookup_CovCond_1130_1808", Nibble("Lookup_CovCond_1130_1808", SetNull("Lookup_CovCond_1130_1808","Lookup_CovCond_1130_1808", "VALUE NOT IN (1,2,3,4,5,6,8,10,20,30,40,50)")), "VALUE IN (7)") \end{lstlisting}
+            \item Repeat i through iv as needed.
+            \begin{itemize}
+            \item Take 2 (7 pixels remain): Only cover types with errors are 15, 25, and 27, all of which have 3 instead of 2 or 5. Solve with Nibble\begin{lstlisting}
+Con("Lookup_Condition_1130_2346","Lookup_Condition_1130_2346", Nibble("Lookup_Condition_1130_2346", SetNull("Lookup_Condition_1130_2346","Lookup_Condition_1130_2346", "VALUE NOT IN (2,5)")), "VALUE IN (1,3,4,6,7,8,10,20,30,40,50)") \end{lstlisting}
+            \end{itemize}
+        \end{enumerate}  
+        \item Reclassify condition raster to new values by adding new field to attribute table, correctly populating, and then use Lookup to generate the new raster layer.
+        \begin{verbatim}
+0   Non-seral
+10  EARLY_ALL
+20  MID_ALL
+21  MID_CL
+22  MID_OP
+30  LATE_ALL
+31  LATE_CL
+32  LATE_OP
+40  EARLY_ASP
+41  MID_ASP
+42  MID_AC
+43  LATE_CA
+\end{verbatim}  
+    \end{enumerate}
+\end{enumerate}
+

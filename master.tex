@@ -1,0 +1,92 @@
+\documentclass{book}
+\usepackage[left=1in,right=1in,top=1in,bottom=1in]{geometry}
+\usepackage{latexsym}
+\usepackage{listings}
+\lstset{breaklines=true, language=Python, showspaces=false, showstringspaces=false}
+\usepackage{wrapfig,subfig,graphicx}
+\usepackage{textcomp}
+
+\begin{document}
+
+\author{Maritza Mallek}
+\title{RMLands Project}
+\date{October 2013}
+
+\section{Outline}
+\subsection{Spatial Data Preparation}
+Xeric/Mesic Gradient preparation\\
+YHR Type Selection\\
+Eveg Layer Selection\\
+Scale and Extent\\
+Scripts and tools used for spatial data prep\\
+some of this will be redundant with the rmlands spatial data pdf\\
+Age
+
+\subsection{landcover type descriptions and models}
+Primary sources for text (e.g. landfire, whr, feis, Cal veg book)\\
+Primary sources for model values (e.g. landfire, expert opinion)\\
+generation of succession probabilities\\
+
+\subsection{parameterization}
+Climate data: sources, calculations\\
+Weather data: sources, calculations\\
+Fire size distribution\\
+Susceptibility metrics\\
+Prob of high mortality\\
+
+\subsection{general notes}
+may be worth it to include general description of how and when we involved FS folks\\
+District vs. Ecology Group vs. Hugh vs. other advisors\\
+
+\subsection{original goal list}
+Tahoe folks had spent time working on the foundational cover layers, including an existing veg layer and a potential veg layer. They also developed a set of ``Yuba Habitat Relationships'' based on the California Wildlife Habitat Relationships. Tahoe would crosswalk data sets to one another: for example, the PNV layer was cross walked to LandFire cover types, which link to the disturbance models.
+
+The original set of work to be done was:
+\begin{enumerate}
+\item{Create state transition models for each Yuba River cover type. Hopefully they can be based largely on the LandFire cover types.}
+\item{Analyze existing cover types and LandFire cover types}
+\item{Evaluate the quality of the data: for example, conduct a compositional analysis in GIS and determine the relative similarity between the EVeg, PNV, and Wieslander vegetation layers.}
+\item{Do a lit review to collate data on the pertinent disturbance regimes.}
+\end{enumerate}
+
+\subsection{work history}
+On 11/9, Kevin had been promised an email with a new PNV layer and a complete crosswalk.
+
+Initially I focused on the LandFire as the basis for the type descriptions. The model diagrams were inspired by the state transition models used for the Colorado Plateau landscapes. I simultaneously worked on developing the input layers, particularly the vegetation layer, for use in the first phase of the model - historical range of variability.
+
+At the beginning of December (the 11th or so), I had a call with Becky in which we discussed what the PNV layer really reflected. Was it Potential Natural Vegetation in the old-school sense, now usually termed Environmental Site Potential, or what would achieve dominance on a site over the long-term given no disturbance? Or was it what Kevin and I had assumed, the more modern definition (changed officially by the Forest Service at least by 1990), which is the typical vegetation assemblage given natural disturbance but exclusive of human-driven disturbance?
+
+On 12/16, in an attempt to clarify, I showed Becky a definition of PNV found in one of the field guides used to devise YHR types (Potter 1998) that matched by definition. Becky replied asking me to look at the Fites methodology from her classification system for mixed conifer types (1993). It described PNV as ESP. She further said that she classified the additional PNV layers based on the Potter definition. In other correspondence we established that Alan had done this using Fites definition. I notified Kevin of the competing definitions. 
+
+I also did many cross-comparisons of the input layers. Over and over again I found them to be highly variable from one another - a 40\% match or so in cover types was about the best I ever did. I concluded that we would not be able to use more than one of the input layers - so the original idea of using one layer for the historical condition and one for the EVeg would not work, unless we were comfortable with them being landscapes that are configured very differently. At this time we were also trying to find a time to have a group conference call to discuss our process. I had become convinced by mid January that we would have to create our own PNV layer somehow - none of the input layers were perfect. But, we could not move forward with a plan to reject the original input layers without input and consent of the larger team. Unfortunately, we were unable to schedule a call until February 25th.
+
+On 6/18, I received Excel files containing the transcribed Stand Exam data.
+
+In the second half of August, I created a document showing the FRI values for high and low mortality and the High/Low mortality percents that aggregated this information across all cover types. I shared it with Becky and Hugh for review. I received feedback and incorporated it and sent it to the District to review as well. They came back with the opinion that it all looked good. I also sent them an ArcMap document showing Age information and a set of histograms showing the age distribution by cover type to review. They responded that it looked good as well. 
+
+I wrote initial drafts of all of the cover type description documents. Becky and Hugh performed initial reviews of Sierra Mixed Conifer, which we typically used for first runs due to its complexity and its role as the single most common cover type on the project landscape. After I finished all the draft descriptions, Becky sent them out to ecologists around the region for review and then routed the reviewed documents back to me. I incorporated the feedback. It was rare for reviewers to offer specific changes, especially to numbers within the documents. Most people made suggestions by saying to ``increase," for example, FRI values, but generally did not indicate by how much or in relation to what. That level of feedback occurred as well, but was less common. The reviews were still useful and often revealed confusing sections for which a revision could be applied globally. I modified each document to note who performed its review and list their position title. 
+
+\subsection{dropped ideas}
+Mining is known at a general level to have had large and widespread impacts. Large amounts of timber was harvested for mining purposes, and rivers were manipulated to facilitate mining activities. Mining tailings still persist on the landscape, and may or may not be visible from satellite imagery or orthophotos. Old photos or archaeology data may exist that would show evidence of past disturbance that could affect our assessment of the presettlement. At one point Becky was going to check with Archaeology for more information, but I don't think this ever took place.
+
+I took a look at the elevation range for the proposed YHR types, in hope that elevation might be a good way to differentiate between some of the types, but there is a huge amount of overlap. Not very many types, if any, could be subdivided based on elevation alone. I had hoped this would help specifically with the mixed conifer zone types, which included mixed conifer mesic, mixed conifer xeric, white fir mesic, white fir xeric, doug fir, dough fir tanoak, and ponderosa-oak. Even adding aspect to the mix didn't really help as none of the species were aspect-obligates.
+
+%\frontmatter 
+%\tableofcontents 
+\include{preface} 
+
+\mainmatter 
+\include{1_InputLayerPrep} 
+\include{2_DisturbanceSuccessionTransitionDevelopment} 
+\include{3_Procedures} 
+\include{4_RMLandsParameterDevelopment} 
+\include{5_ModelCalibration} 
+
+\backmatter 
+\include{glossary} 
+\include{notat} 
+\bibliographystyle{amsalpha} %The style you want to use for references. 
+\bibliography{mr,refs} %The files containing all the articles and books you ever referenced. 
+%\printindex %Make an index AUTOMATICALLY 
+
+\end{document} 

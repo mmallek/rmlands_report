@@ -1,0 +1,41 @@
+\chapter{Model Calibration}
+General note: when exporting output data, they go to the main folder for the run executed and are simply appended to the existing csv files, so they do not have to be moved around, and this is also how you can compare multiple runs of the simulation in one R function. 
+
+\section{Check that disturbance and succession rules executed}
+In R, run script to generate drulecheck.csv and srulecheck.csv. These files show the number of eligible pixels for each rule over the course of the entire simulation, and the number of pixels that were subjected to each rule. If the probability of a given rule was 1, then all eligible pixels should have been subjected to the rule. If the probability was less than one, than the percentage of pixels subjected to a rule should be equivalent to the probability of that rule being executed.
+
+\section{Preturn vs. SReturn}
+Pixel return vs. Stand return? Preturn shows cell-level return interval (the ideal) while sreturn shows the average for all cells of that cover type. Note, still not sure how these differ from rotation.
+
+\section{Susceptibility}
+In order to differentiate open conditions from closed conditions, parameterization of susceptibility in RMLands must be done by assigning single susceptibility values to each condition class for a cover type, rather than use the Weibull function. I calculated relative susceptibility among the conditions for given cover types based on the LandFire values. However, we were not sure how to convert these values into the susceptibility numbers. I began by using the actual relative values (which summed to 1), but these resulting in not enough fire in the types for which this was used (SMC and RFR).
+
+\section{Specific Run Results}
+
+\subsection{October 7}
+Increased susceptibility of non-Hazard Function types by 0.5
+
+\paragraph{darea}: 5-88\%: probably too much fire for Tahoe folks
+\paragraph{rotation}: 
+\begin{itemize}
+\item CMM - too low
+\item LPN - too much any
+\item LPN\_ASP - too much any
+\item MHW: not enough any
+\item MHW\_U: not enough any
+\item MRIP: too much any
+\item OAK: not enough any
+\item OCFW: not enough any (right proportions)
+\item OCFW\_U: not quite enough
+\item RFR: too short
+\item SMC\_M: good
+\item SMC\_X: too long
+\item SMC\_U: too short
+\item SMC\_A: little too short
+\item SCN: too short
+\end{itemize}
+
+\paragraph{rulechecks}: Both ok
+
+\paragraph{Thoughts} Extra fire is likely due to so much in early. If early is fairly susceptible then a cover type may get stuck in it. One solution would be to allow low mortality in early seral, although this goes against our understanding of early seral fire. Another thing we can do is reduce the percentage/likelihood of high mortality fire. Another thing to do would be to consider chaparral as a landscape component - is the amount in it reasonable? Its fire recurrence? It's possible that our gut feelings are driven by the knowledge of Rocky Mountain systems and need to be adjusted. This would be a good subject for discussion with Becky and the other Tahoe folks. 
+
