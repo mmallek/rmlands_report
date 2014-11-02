@@ -1,0 +1,119 @@
+Pendola Restoration Project 
+Historic Range of Variability and Future Management Scenario Analysis
+
+I. Introduction/"Purpose and Need"
+	A. What is historic range of variability
+	C. HRV and link to management and planning
+	D. RMLands
+
+II. Methods
+	A. Study Area
+	B. Modeling Framework- RMLands (Kevin will write this)
+	i. HRV
+		1. Data prep
+			B. Common Input Layers
+				1. Input Layers: source, processing, purpose
+		C. Model Parameterization
+				1. State and Transition Models
+				2. Disturbance parameters
+					a. Climate
+					b. Susceptibility
+					c. Initiation
+					d. Spread
+					e. Mortality
+		D. Model Calibration
+		E. Model Execution
+			3. Run parameters
+				f. length/timesteps
+		F. Data analysis
+			1. Disturbance regime
+			2. Vegetation response 
+				a. Landscape composition (covcond plots)
+				b. Landscape Structure/Patterns
+	ii. Future Veg Treatments (match this to HRV header styles)
+		1. Data prep
+			B. Common Input Layers
+				1. Input Layers: source, processing, purpose
+		C. Model Parameterization
+				1. State and Transition Models
+				2. Disturbance parameters
+					a. Climate
+					b. Susceptibility
+					c. Initiation
+					d. Spread
+					e. Mortality
+		D. Model Calibration
+		E. Model Execution
+			3. Run parameters
+				f. length/timesteps
+			2. Post-processing (rescale, clip)
+		F. Data analysis
+			1. Disturbance regime
+			2. Vegetation response 
+				a. Landscape composition (covcond plots)
+				b. Landscape Structure/Patterns
+
+III. Results
+	i. HRV
+		1. Disturbance regime
+			1. Disturbed Area
+			2. Rotation
+			3. Population Return Interval
+		2. Vegetation response 
+			a. Landscape composition (covcond plots)
+				4. Cover-Condition Dynamics (plots and tables)
+			b. Landscape Structure/Patterns
+			B. Fragstats analysis
+				1. Class Metrics (all listed, I'll pick a subset for inclusion in the report)
+					a. PLAND
+					b. PD
+					c. ED
+					d. AREA_MN
+					e. AREA_AM
+					f. GYRATE_AM
+					g. SHAPE_MN
+					h. SHAPE_AM
+					i. CPLAND
+					j. CORE_MN
+					k. CORE_AM
+					l. CAI_AM
+					m. SIMI_MN
+					n. CWED
+					o. CLUMPY
+					p. IJI
+					q. AI
+				2. Landscape Metrics (see above)
+					a. PD
+					b. ED
+					c. AREA_MN
+					d. AREA_AM
+					e. GYRATE_AM
+					f. SHAPE_MN
+					g. SHAPE_AM
+					h. CORE_MN
+					i. CORE_AM
+					j. CAI_AM
+					k. SIMI_MN
+					l. CWED
+					m. CONTAG
+					n. IJI
+					o. PR
+					p. SIDI
+					q. SIEI
+					r. AI
+		C. HRV Departure Analysis
+	ii. Future Veg Treatments
+		- see part i.
+IV. Discussion
+	#A. Results with high confidence
+	#B. Results poorly supported
+	#C. Areas where no conclusions can be made
+	Scope/limitations
+	Tell the story of each cover types, as synthesis of all the results.
+	Overall landscape
+V. Management Implications
+
+
+
+
+

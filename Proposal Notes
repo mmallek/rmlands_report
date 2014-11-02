@@ -1,0 +1,31 @@
+Proposal Notes
+
+--What is the real question you are asking? Maybe it's simple/sounds broad.
+-Ok, what is the historic range of variability for this Forest?
+
+--Now, I know that this isn't enough. This is the first step to doing more real science, and getting to the point where we can really ask some questions and test some hypotheses. And it's a big step.
+
+--Well, why are you taking so much time on the first step? Why not just use another method to quantify historic range of variability?
+
+--Here we get to the better justification. Historic range of variability is super important to have in hand as a baseline against which to test our other predictions. The RMLands model will give us a way to implement simulations for both the historic part and the future part, which should increase the reliability of our predictions for the future condition and management decisions. 
+
+--But the key thing is to get it right. So we need to be very careful in developing/adapting the model, and so what I could propose for class is the adaptation of the model itself.
+
+--Then the future management scenarios bit can be next steps.
+
+--This also might provide a better segue into testing/improving small bits of the model. I already added variability in the transitions. We may also change the methedology for calculating susceptibility. Simply testing for differences in the approaches is probably an important part of this model.
+
+--A whole paper could be written on the drawbacks of other models, but probably best not to focus on that. Instead, focus on what RMLands will DO, and only discuss how this is an improvement upon or similar to other models. But in general, focus on what RMLands does and why that's good. If discussion the deficiencies of the model, address whether they could realistically be addressed, or what might need to be addressed.
+
+--So the question is: what's the historic range of variability on this landscape?
+--Objectives: 
+	create input layers
+	evaluate disturbance and succession rules as implemented in RMLands
+	assess suitability of LandFire layers
+	calibrate the model
+	run simulations
+	quantify HRV
+
+
+NOTEBOOK
+16 July 2013 - thesis idea, involves PDSI			

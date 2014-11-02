@@ -237,37 +237,19 @@ I classified aspen patches into condition classes by viewing the 2010 and 2012 N
 Alan Doerr had access to old stand exams from the 1960s-1980s, as well as to information from FACTS that allowed us to extract stand ages. The stand exam plots and modern veg plots from Becky gave us baseline ages, and information from FACTS and Fire allowed us to superimpose ``high mortality'' events that reset patch ages on the underlying age matrix. The Fire severity information came from Normalized Burn Ratio ($\delta NBR$) maps for the study area since 1994. 
 
 \subsection{Aspect}
-I created the aspect layer using the Aspect tool in ArcGIS, using the DEM as the input layer. I then converted it to categorical data from continuous data using the following script within Raster Calculator:
-\lstset{language=SQL}
-\begin{lstlisting}
-Con("...Rasters\Aspect_062613_1258" == (-1), 9, Con(((0 <= "...Rasters\Aspect_062613_1258") & ("...Rasters\Aspect_062613_1258" < 22.5)), 1, Con(((22.5 <= "...Rasters\Aspect_062613_1258") & ("...Rasters\Aspect_062613_1258" < 67.5)), 2, Con(((67.5 <= "...Rasters\Aspect_062613_1258") & ("...Rasters\Aspect_062613_1258" < 112.5)), 3, Con(((112.5 <= "...Rasters\Aspect_062613_1258") & ("...Rasters\Aspect_062613_1258" < 157.5)), 4, Con(((157.5 <= "...Rasters\Aspect_062613_1258") & ("...Rasters\Aspect_062613_1258"< 202.5)), 5, Con(((202.5 <= "...Rasters\Aspect_062613_1258") & ("...Rasters\Aspect_062613_1258" < 247.5)), 6, Con(((247.5 <= "...Rasters\Aspect_062613_1258") & ("...Rasters\Aspect_062613_1258" < 292.5)), 7, Con(((292.5 <= "...Rasters\Aspect_062613_1258") & ("...Rasters\Aspect_062613_1258" < 337.5)), 8, Con(((337.5 <= "...Rasters\Aspect_062613_1258") & ("...Rasters\Aspect_062613_1258" <= 360)), 1, 99999))))))))))
-\end{lstlisting}
-\lstset{language=Python}
+See Procedures chapter for more info on how the aspect layer was derived.
 
 \subsection{Slope}
-I created the slope layer using the Slope tool in ArcGIS, using the DEM as the input layer. I then converted it to a truncated set of integers (1-126) using raster calculator.
-\lstset{language=SQL}
-\begin{lstlisting}
-#Round slope values to whole numbers
-Int("Slope Layer" + 0.5)
-#Reclass slope values \textgreater 126 to 126
-Con("Slope Layer" > 126, 126, "Slope Layer")
-\end{lstlisting}
-\lstset{language=Python}
+See Procedures chapter for more info on how the slope layer was derived.
 
 \subsection{Elevation}
-I used the DEM for elevation. I rounded it using Raster Calculator.
-\lstset{language=SQL}
-\begin{lstlisting}
-Int("Elevation Layer" + 0.5)
-\end{lstlisting}
-\lstset{language=Python}
+See Procedures chapter for more info on how the elevation layer was derived.
 
 \subsection{Streams}
-The original streams layer was a polyline vector format. I converted it to raster, clipping it to the DEM, and assigning pixels based on maximum length.
+See Procedures chapter for more info on how the streams layer was derived.
 
 \subsection{Roads}
-The original roads layer given to us by the Tahoe team did not include a mechanism to sort the roads by size. I discussed the use of roads in RMLands - they function primarily as a potential spread inhibitor (and end up functioning as habitat fragmenters). The Tahoe team considered the roads within the project area and their desire to maintain portability and determined that the project landscape only contained two levels of roads, small and medium. Large roads would be roads such as interstates, which do not cross the current landscape but are present nearby. They sent us an updated roads layer with all polylines attributed for road size. I then converted this polyline vector layer to raster.
+See Procedures chapter for more info on how the roads layer was derived.
 
 \subsection{Condition-Age} 
 

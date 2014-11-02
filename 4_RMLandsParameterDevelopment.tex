@@ -1,5 +1,5 @@
 \chapter{RMLands Parameter Development}
-\section{Climate and Weather}
+\section{Climate}
 \subsection{Palmer Drought Severity Index}
 From NOAA, I downloaded a KML file showing the grid points for the paleoclimatology data they had available. I used this to calculate the distance from a given grid point to the center of the study landscape. From ????, I obtained a map showing the grid points for the ??? dataset.
 
@@ -32,7 +32,7 @@ Finally, I created a comma-delimited text file containing only the time step val
 \includegraphics[width=0.8\textwidth]{PDSIpic}
 \end{figure}
 
-\subsection{Weather Stations}
+\section{Weather}
 I first looked into finding RAWS stations near the project area. Becky recommended using MesoWest, a service from the University of Utah that provides access to archived weather observations.
 
 I consulted with a fuels specialist on the Tahoe as well as Becky in order to determine the dates of the fire season and hours for the daily burning period. On June 20th we resolved that fire season lasts from May 15 to October 15, and the burning period is 6-8 hours. Becky and I resolved to use 1000-1800 as the burning period.
@@ -312,8 +312,6 @@ both_ha = both * 0.404686
 bins = [0, 1, 10, 100, 1000, 10000, 100000]
 \end{lstlisting}
 
-
-
 The output of the histogram function gives the number of fires falling within each size range.
 \begin{lstlisting}
 In: np.histogram(both_ha, bins=bins)
@@ -329,22 +327,94 @@ In: rml_firevals = binnedfire / np.sum(binnedfire, dtype=np.float)
 Out: array([ 0.83672206,  0.06285478,  0.04747652,  0.04107751,  0.0105274 , 0.00134173])
 In: rml_firevals_pct = rml_firevals * 100
 Out: array([ 83.67220559,   6.28547838,   4.74765198,   4.10775106, 1.05274022,   0.13417277])
-\end{lstlisting}        
+\end{lstlisting}
+
+We do acknowledge that the fire size distribution used here is taken almost exclusively from the fire-suppression period (or in areas where fire-suppression continues for various reasons today), and so it is an imperfect, but we think close, representation of the distribution of fire sizes during the historical period from 1550-1850.        
 
 \section{Susceptibility}
-\subsection{Hazard Function}
-One input in the model is to apply the hazard function of the Weibull model to the susceptibility to fire for a given cover type. The inputs are scale (equivalent to mean FRI), shape (which has no deterministic basis, and is typically 3), and the reset point for the function (age since any disturbance, age since high mortality, age since low mortality, age since condition class change, etc). There is an accompanying graphic within RMLands that shows what this curve looks like for a given cover type parameter selection. While we were parameterizing the adapted model the first time, Kevin realized that prior uses of the model had technically misused the hazard function, which is an unbounded on the right function. In previous versions, RMLands simply truncated the hazard function when the output value reached 1 (because it is treated as a probability in the model). It did not cause problems in prior runs, but appeared to in our initial Sieran runs. Consequently, we will modify RMLands such that in future simulations the cumulative form of the Weibull model will be used instead. It contains the same parameters as the hazard.
+\subsection{Topographic Position Index} A discussion of how TPI was calculated can be found in Chapter 3 - Geoprocessing. We incorporate it into susceptibility with a 4-parameter logisitic function. To calculate HRV, we have modified only the left side (value at which it asymptotes) in order to parameterize the size of the effect TPI has on susceptibility. We are aware of no empirical data reported in the literature that provides a quantitative basis for assigning this value, so we have used 0.7 across the cover types for which we believe TPI affects susceptibility (Grassland; Lodgepole Pine; Mixed Evergreen Mesic, Ultramafic and Xeric; Montane Riparian; Oak Woodland; Oak-Conifer Forest and Woodland; Oak-Conifer Forest and Woodland-Ultramafic; Red Fir Mesic, Ultramafic, and Xeric; Sierran Mixed Conifer Mesic, Ultramafic, and Xeric; Western White Pine; Yellow Pine). This values is used at the cover type level (same for all condition classes).
 
-For at least the initial parameterization of the model, we used the expert and literature-generated FRI values. When choosing ``age since \_\_\_\_\_\_,'' we selected ``Age since any disturbance'' for fuel-driven cover types, and ``Age since high mortality disturbance'' for climate and weather-drive cover types.
+\subsection{Hazard Function}
+One input in the model is to apply the hazard function of the Weibull model to the susceptibility to fire for a given cover type. The inputs are scale (equivalent to mean FRI), shape (which has no deterministic basis, and is typically 3), and the reset point for the function (age since any disturbance, age since high mortality, age since low mortality, age since condition class change, etc). There is an accompanying graphic within RMLands that shows what this curve looks like for a given cover type parameter selection. While we were parameterizing the adapted model the first time, Kevin realized that prior uses of the model had technically misused the hazard function, which is an unbounded on the right function. In previous versions, RMLands simply truncated the hazard function when the output value reached 1 (because it is treated as a probability in the model). It did not cause problems in prior runs, but appeared to in our initial Sierran runs. Consequently, we modified RMLands such that in future simulations the cumulative form of the Weibull model will be used instead. It contains the same parameters as the hazard.
+
+\subsubsection{Mean Return Interval}
+The input mean fire return interval is a calibration parameter. The starting point for the value of this parameter is the derived return interval based on LandFire data, the only source of which we are aware that describes fire return intervals at a condition class level like ours (LandFire uses Early, Middle and Late Development, and Open and Closed Canopy). This parameter was changed during calibration as described in Chapter 5, Model Calibration.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+The FRIs are not directly the same as the probabilities as what VDDT uses. VDDT focuses on a type of fire (e.g. mixed) that leads to a particular outcome (e.g. resetting to early seral conditions). VDDT includes 'mixed severity' fire, a construct that we do not include in our model. Instead, we have two types of fire, judged based on their outcomes: high mortality events, and low mortality events. To interpret the VDDT models, I analyzed not only the fire type (replacement, mixed, or surface), but also the condition transitions that occurred as a consequence of that fire. I sorted the probabilities in the VDDT model into 3 bins. High mortality fires are those that result in conversion to early seral, regardless of whether they are called ``replacement'' or ``mixed.'' All other fires are considered low mortality. For closed systems, I separated probabilities associated with fires that led to no change in the current condition, versus conversion to an open condition. For open systems, I took VDDT at its word with respect to ``surface'' vs. ``mixed'' (since the outcome was the same for both). I summed the probabilities given for both low and high mortality fires, and for all fires. By taking the inverse, I arrived at fire return intervals, in years, for high, low, and any mortality events. Secondly, the proportion of high severity fires was calculated by dividing the probability of high mortality fire by the summed probability of fire. The full spreadsheet showing all calculations is `disturbance_prob_calcs.xlsx.'
+
+\subsubsection{Shape Parameter}
+The same shape parameter was used for all cover types and condition classes: 3.
+
+\subsubsection{"Age Since"}
+For at least the initial parameterization of the model, we used the expert and literature-generated FRI values, which is described in more detail in Chapter 2. When choosing ``age since \_\_\_\_\_\_,'' we selected ``Age since any disturbance'' for fuel-driven cover types, and ``Age since high mortality disturbance'' for climate and weather-driven cover types. The following cover types are considered fuel-driven:
+\begin{enumerate}
+    \item Agriculture
+    \item Grassland
+    \item Lodgepole Pine
+    \item Black and Low Sagebrush
+    \item Meadow
+    \item Mixed Evergreen - Mesic
+    \item Mixed Evergreen - Ultramafic
+    \item Mixed Evergreen - Xeric
+    \item Oak Woodland
+    \item Oak-Conifer Forest and Woodland
+    \item Oak-Conifer Forest and Woodland - Ultramafic
+    \item Sierran Mixed Conifer - Ultramafic
+    \item Sierran Mixed Conifer - Xeric
+    \item Urban
+    \item Yellow Pine
+\end{enumerate}
+The remaining cover types, listed below, are disturbed by wildfire under climate and weather-driven conditions:
+\begin{enumerate}
+    \item Curl-leaf Mountain Mahogany
+    \item Lodgepole Pine with Aspen
+    \item Montane Riparian
+    \item Red Fir with Aspen
+    \item Red Fir - Mesic
+    \item Red Fir - Ultramafic
+    \item Red Fir - Xeric
+    \item Big Sagebrush
+    \item Subalpine Conifer
+    \item Subalpine Conifer with Aspen
+    \item Sierran Mixed Conifer with Aspen
+    \item Sierran Mixed Conifer - Mesic
+    \item Western White Pine
+    \item Yellow Pine with Aspen
+\end{enumerate}
+
+\subsubsection{}
 
 \subsection{Spread Weights}
 Where the model asks for inputs for Min and Max, this refers to fire size. Recall that each fire is probablistically assigned a maximum size at the time of initiation. Reviewing the fire size distribution for most areas reveals that most fires fall on the ``min'' side.
 
-\section{Spread}
-Use joint cell: if multiple adjacent burning cells, a given unburnt cell is more likely to burn. it get evaluated multiple times and the probabilities are summed.
-Cell evaluation: cells are reevaluated each step
-Majority filter - 3x3 window to smooth fire edges and fill in holes
-Local spread window: to deal with pixelated landscapes - mostly for bugs
+\section{Initiation} The ignition calibration coefficient is the ignitions per 100,000 hectares per year. Like mean return interval, it is a calibration parameter and was modified during the calibration process. The final value for the calibrated HRV model is 38 ignitions/100,000 ha/year.
+
+\section{Spread} No new research was done to select and define parameters for spread within the model. Expert modeling opinion by project members was used instead. The wildfire size distribution values and wind direction values are input in this section. For complete specifications, see the model file associated with the calibrated HRV simulation.
+%Use joint cell: if multiple adjacent burning cells, a given unburnt cell is more likely to burn. it get evaluated multiple times and the probabilities are summed.
+%Cell evaluation: cells are reevaluated each step
+%Majority filter - 3x3 window to smooth fire edges and fill in holes
+%Local spread window: to deal with pixelated landscapes - mostly for bugs
+
+\section{Mortality}
+In the first iteration of this model (presented to the Tahoe NF in February 2014), we calculated the percent mortality using the VDDT/LANDFIRE values at the cover type level, which were then modified based on expert opinion from our partners on the TNF. In some cases the modifications required us to go back and change the FRI estimates, due to mathematical conflicts.
+
+For the second iteration of the model, we have included separate percent mortality estimates for each condition class associated with a given cover type. These were calculated again based on VDDT/LANDFIRE. For a few cover types, Hugh Safford provided us with modified VDDT inputs. The results [will be] shown to the Tahoe NF team for approval.
+
+Topographic Position Index was applied at the cover type level as described in the secion on Susceptibility.
 
 
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%
+It is also critical to ensure proper grouping in the rule file. This means that the rules for a certain disturbance must be enclosed by a pair of markers such as these for wildfire:
+
+<wildfire>
+// some comment
+wildfire rule 1
+wildfire rule 2
+...
+wildfire rule n
+</wildfire>
          

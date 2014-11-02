@@ -1,0 +1,577 @@
+\chapter{Geoprocessing}
+
+\section{General/Miscellaneous}
+
+\paragraph{Data Structure} RMLANDS uses raster GeoTiffs (.tif files) as its data structure. Rasters are based on uniform square units called cells (or pixels). Each cell represents an actual portion of geographic space, where each cell has a defined X and Y value that corresponds to the coordinates defined by the projection. For example, in the Universal Transverse Mercator (UTM) projection, the grid that covers the entire Tahoe and Plumas National Forests project area is in UTM zone 10 N and covers an area defined by a range of X and Y values (minimum and maximum). In this application each grid cell is 30 meters on a side (i.e., 900 m2 or 0.09 ha). All grids must be single-attribute, signed integer grids. In other words, each cell is assigned a single class value, where valid class values are positive or negative whole numbers. Floating point grids are not valid.
+
+\paragraph{Raster layer alignment} RMLANDS requires that all grids are perfectly aligned. This means that not only must all grids have the same cell size and the same numbers of rows and columns, but the cells need to occupy the exact same geographic space (out to six decimal places) and have the same number of total cells. RMLANDS does a check of this when it first executes to insure that these requirements are met. If one grid is not aligned, an error message will be issued to the log and the program will not run. The cell size or numbers of rows or columns can be defined by the user when the project first begins, but it needs to be consistent among grids. To ensure this, during geoprocessing certain Environmental Settings must be used. Set Extent to the 'Lattice_Clip30m_ProjBound' (DEM layer clipped to the project buffer boundary). Set snap raster to the same. 
+
+\paragraph{Geoprocessing Needs} The spatial data used to create the input rasters can take various forms. Some of the input data is already in raster format and simply needs to be altered slightly to conform to the project raster template. For example, to create the elevation raster in the SJNF application, we started with an existing DEM. The only processing required was to resample it to a different cell size and shift it slightly to conform to the project grid template. Other input data might be in vector format (i.e., points, lines or polygons) and need to be manipulated in such a way as to extract some subset of the original data based on one or more attributes contained within the data source and then converted to a raster, again using the same project raster template. For example, to create the streams raster, we started with a polyline vector file in a geodatabase that contained a stream order attribute used to assign a stream size class to each stream cell. Finally, some of the input rasters can be derived from other required grids. For example, from the elevation raster, we derived the slope and aspect rasters.
+
+\subsection{CSV File Generation}
+Ensure that tables start with a signature, which is basically the name of the file with the extension removed and replaced with _id, for instance: "cover.csv", starts with "cover_id" and "test_cover.csv" starts with "test_cover_id" in the first line of the file. The rest of the heading is not tested and serves mostly as a guide when composing the table in a text editor.
+
+\subsection{Crest Side Polygon}
+First done in February 2013; redone July 2013. Draw a line along the Sierran crest so that polygons can be assigned to one or the other, so that ``eastside" vegetation types do not appear on the west side of the crest. I traced the core area polygon border for the relevant part to ensure no eastside types would be able to appear on the westside. I also used the HUC watershed boundaries and the DEM as a guide.
+
+Note, this was originally done by polygons, with the default for polygons that straddled the crest to be counted as westside types. I later learned how to split all these straddling polygons using the topology toolbox and the Split Polygons tool, so some of these procedures may be redundant. 
+
+The last step is to manually assign all of the polygons along the crest to east and west, some of which are tiny slivers, so this was time-consuming. I did not come up with a way to automate this, though I'm sure one exists. Unfortunately, even with this change, a few (6) pixels of Yellow Pine still showed up in the core area, most likely due to the use of maximum area when converted the EVeg layer from polygon to raster. The simplest way to fix this is to use the Con tool to look for Yellow Pine pixels within the core area and reassign them to the appropriate value for Oak-Conifer Forest and Woodland. This step has to be redone as part of the Cover layer creation process, and is included in the steps for that below. %look for raster calculator how-to of this on computer - rough description from 9 July in notebook
+
+\section{Sliver Removal}
+The EVeg layer had at least three sources, which were merged to generate a complete depiction of the region. Alan Doerr completed the work of processing out the slivers that were generated by the edges of different datasets being superimposed on one another.
+
+\section{Geoprocessing May-July 2014}
+The lattice dem layer provided by the FS is used as the basis for all further work. It was clipped to the project boundary 10k buffer (polygon). Thereafter, that clipped lattice layer was used for the extent and snap raster, and designated as such in the environment settings. Other pertinent environmental settings are that ``maximum area'' is used for cell assignment and ``UTM 10N'' is used for the projection. In addition, whenever working in the Python window within ArcMap, the following lines of code should be used before submitting any of the functions listed below:
+\begin{lstlisting}
+import os, sys
+os.chdir("Y:/Tahoe/Scripts")
+sys.path.append(os.getcwd())
+\end{lstlisting}
+
+\subsection{Modifiers}
+There are three types of modifiers for the cover types: xeric, mesic, and ultramafic. The process of creating the layers associated with xeric and mesic parts of the landscape is described [in a previous section]. Geoprocessing associated with these layers uses some of the same functions used for cover, and some unique to this need.
+
+The layer used for ultramafics was obtained for the entire state of California. It was clipped to the buffered project extent before being converted from vector to raster data. As part of this process only polygons/rows designated as ultramafic were selected and then converted to raster using ``genpolytoraster''. Consequently, the ``background'' function was also needed to continue with geoprocessing.
+
+The layer ``ASP_PET_STOR_TWI_FM5_0626_1440'' was created to include aspect, potential evapotranspiration, soil water storage, and a topographic wetness index (all rescaled by z-score) to create a grid with a mean of about 0. Three cover types are split into mesic and xeric subtypes: Sierran Mixed Conifer, Red Fir, and Mixed Evergreen. The break point between mesic and xeric is different for Mixed Evergreen than for the other two cover types. Because it is already a raster, this layer does not need to be converted. 
+
+In the FUNmodifiers.py script, the function ``makemods'' combines the ultramafic and xeric-mesic layers and the ``'parsmodcombine'' function creates an output raster that contains information used to classify the cover later later in the geoprocessing sequence. 
+
+%%%%%%%%%%%%%%%%%%
+\subsection{Cover}
+Cover represents land cover type. Cover can be defined in any manner and can be derived from any data source or sources. Typically, however, cover type is based on the potential or current natural vegetation of a site and may include both natural and anthropogenic cover types. Cover affects virtually every process in RMLANDS. For example, succession pathways are defined uniquely for each cover type, susceptibility to natural disturbances varies among cover types, and suitability or eligibility for various vegetation treatments varies among cover types. Cover is a “static” grid. Specifically, cover provides a fixed template upon which disturbance and succession processes play out over time. The cover type of a cell does not change over time; it is constant. All cells within the project boundary must be assigned a cover type; i.e., there can be no missing data or “background” within the project boundary. NODATA is reserved for all cells outside the project boundary.
+
+\subsubsection{Preprocessing}
+Prior to actual geoprocessing, the cover field within the EVeg layer must be populated. Python functions are found in the script FUNcalcYHR.py. This script contains the rules by which each cover type in the model are defined, based on other fields within the EVeg layer (e.g., Regional Dominance Type 1 or OS Tree Diameter Class 1).
+
+\subsubsection{Convert Vector Layers to Rasters}
+Python functions for converting vector layers to raster grids suitable for further processing are contained in the script FUNpolytoraster. Many vector layers are suitable for processing using the generic function ``genpolytoraster'', but in some cases only a subset of the full layer was to be retained (e.g., streams, geology), so in those cases optional arguments are included to deal with these special cases.
+
+After converting the vector data to raster, the function ``background'' is used to convert areas of NoData to a dummy value of 99999. This is most important for running future functions such as combine that will ignore NoData portions of the project area. It must be done for the following layers at a minimum:
+\begin{enumerate}
+	\item Cover
+	\item Aspen (also done on condition column for condition layer creation)
+	\item Meadow
+	\item Streams
+	\item Geology
+\end{enumerate}
+
+\subsubsection{Transforming the Data}
+After creating the necessary raster layers, further geoprocessing steps are needed to prepare the Cover layer for input into RMLands. Most of the following steps include some variation of using the Nibble function to fill in gaps or overwrite bad data, and the Combine function to incorporate additional data sources and further specify the cover types.
+\begin{enumerate}
+	\item After converting to raster, the next step is to Nibble out the pseudo-YHR types ``EARLY'' and ``ROAD'' (see FUNnibblerast.py). Early is a condition, rather than a cover; most cells assigned to Early were logged as a chaparral type. Roads were not present during the historical period being modeled, and were generally mapped as Urban or Barren in the original layer.
+	\item The next step is to remove Yellow Pine cells from the Core area. During the polygon-to-raster EVeg conversion, the use of ``maximum area'' for cell assignment means that a very small number of cells may be assigned to areas within the core. Yellow Pine as a cover type is only present on the east side of the Sierra crest, and should therefore only be found in the buffer (the core project area follows the crest in part). The function ``RemoveYHR'' is included in FUNnibblerast.py. 
+	\item Next, use the ``combine_rast'' function in FUNnibblerast.py to combine the cover, aspen, meadow, and streams layers. The function will also assign the appropriate new cover code to each cell. The specific priorities used can be found in the function, but generally speaking the order of priority goes from streams, to aspen, to meadows, to cover.
+	\item The ``lookitup'' function creates a new raster layer based on the modified cover type assignment from the previous step.
+	\item As part of the previous combine, in some places the aspen layer overlapped with cover types that can't have aspen (like meadows). They were given a dummy value and the next step is to use Nibble to overwrite them with aspen cover types that are allowed. Use ``nibblerast'' and enter ``aspen=True''.
+	\item Use the ``nibblerast'' function with ``fillbuffer=True'' to fill in the gaps left by the EVeg layer not filling the buffered project area completely.
+	\item The cover layer is then combined with the modifers layer created previously using the ``combine_rast'' function in the FUNnnibblerast script. Then the ``parsemodcombine2'' function from FUNmodifiers script can be used to assign YHR types into a text field. Finally, the YHR types are sorted alphabetically and then numbered accordingly to create a sequence with no gaps. The function for this is ``seqvalue'' and it is stored in the FUNnibblerast script.
+	\item Run ``lookitup'' one more time on the new YHR column to preserve the numeric values.
+\end{enumerate}
+	
+When these steps are complete, the resulting cover layer looks like this:
+\begin{verbatim}
+YHR	Count	Landcover3
+1	60173	AGR
+2	97233	BAR
+3	454		CMM
+4	51302	GRASS
+5	31289	LPN
+6	349		LPN_ASP
+7	50		LSG
+8	38171	MED
+9	150520	MEG_M
+10	18388	MEG_U
+11	153011	MEG_X
+12	24627	MRIP
+13	46514	OAK
+14	632677	OCFW
+15	24275	OCFW_U
+16	381		RFR_ASP
+17	218070	RFR_M
+18	3564	RFR_U
+19	110989	RFR_X
+20	17773	SAGE
+21	139365	SCN
+22	69		SCN_ASP
+23	1341	SMC_ASP
+24	1488003	SMC_M
+25	108605	SMC_U
+26	1016037	SMC_X
+27	8693	URB
+28	91245	WAT
+29	5668	WWP
+30 	116653	YPN
+31	34		YPN_ASP
+\end{verbatim}
+
+\subsubsection{CSV File} The cover csv file includes four required columns and 15 optional columns, which represent various forms of disturbance. The four required columns are: cover_id, cover_name, cover_abr, conditions. The cover_id is the raster grid value. Conditions should contain all possible conditions for that cover type, separated by colons. For example, the entry for Lodgepole Pine is ``EARLY_ALL:MID_CL:MID_MOD:MID_OP:LATE_CL:LATE_MOD:LATE_OP.'' The optional columns are: WFIRE, PDEC, MTPB, DFBB, SBB, SBUD, PDOG, CCUT, SHELT, GRP, IND, REST, MECH, CHEM, PFIRE. These fields are assigned a 1 or 0, depending on whether the cover type is eligible for that type of disturbance or vegetation treatment.
+
+%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Condition}
+Condition (or stand condition) represents the structural condition of vegetation for cover types that undergo succession. Condition classes can be defined in any manner and can be derived from any data source or sources. Typically, however, condition classes represent discrete seral stages of stand development - as identified by experts, which may vary considerably among cover types. Condition can be used to affect virtually every process in RMLANDS. In particular, transitions among condition classes during stand development define the succession pathways for each cover type. In addition, condition can be specified as a factor affecting susceptibility to natural disturbances and suitability (or eligibility) for vegetation treatments. Condition is a “dynamic” grid; cell values change over time during the simulation in response to disturbance and succession processes. Ultimately, the combination of condition and cover defines the categorical classification of the landscape that provides the framework for characterizing vegetation patterns and dynamics.
+
+All cells within the project boundary must be assigned a condition class; i.e., there can be no missing data or “background” within the project boundary. However, some cover types (e.g., roads, urban, agriculture, barren, water, mountain grassland, etc.) may not have multiple condition classes and can be assigned a common value. In addition, all condition classes do not need to exist for each cover type. Rather, each cover type typically has a user-specified limited set of condition classes.
+
+\subsubsection{Preprocessing}
+Prior to actual geoprocessing, the cover and condition fields within the EVeg layer must be populated. Python functions are found in the scripts FUNcalcCanopy.py and FUNcalcDevelop.py. These scripts contain the rules by which the condition for each cover type in the model is defined, based on other fields within the EVeg layer (e.g., Total Tree CFA or OS Tree Diameter Class 1).
+
+\subsubsection{Convert Vector Layers to Rasters}
+Python functions for converting vector layers to raster grids suitable for further processing are contained in the script FUNpolytoraster. Many vector layers are suitable for processing using the generic function ``genpolytoraster'', The RML_Aspen layer must also be converted to raster based on its condition field.
+% ConditionRaster1_0630_0948, AspenCondition_0527_2310
+
+\subsubsection{Transforming the Data}
+After creating the necessary raster layers, further geoprocessing steps are needed to prepare the Condition layer for input into RMLands. Most of the following steps include some variation of using the Nibble function to fill in gaps or overwrite bad data, and the Combine function to incorporate additional data sources and further specify the cover types.
+\begin{enumerate}
+	\item The condition layer is, like the cover layer, smaller than the full buffered project area. Use function ``nibblerast'' and ``condition=True'' to expand the layer. I ignored the static class because later the condition will be forced to comply with cover and the area to be nibbled is outside the core area.
+	% ConditionRaster2_0630_0951
+	\item Use function ``nibblerast'' and ``aspencond=True'' to turn NoData values to 99999 and multiply raster value by 10 so that aspen and condition layers will have unique codes.
+	% Aspen10_0528_1820
+	\item Use function ``condcombine'' in FUNnibblerast.py to combine the general condition and aspen condition layers, using Con to burn the aspen in on top of the condition layer.
+	% ConditionRaster3_0630_1003
+    \item Reclassify condition raster to new values using ``assigncondition'' function followed by ``lookitup'' function. 
+    % ConditionRaster4_0630_1008
+    \item Ensure accuracy between condition and cover layers.
+    \begin{enumerate}
+    	\item Use ``combine_rast'' function to combine latest condition, cover rasters.
+    	\item Use ``parse_covcond'' function to revise. %parse_covcond modified on 20140723 because SAGE, SCN_ASP, and YPN_ASP were assigned to illegal conditions. however, function/process was not repeated. pay attention during this step. also, sage should have been fixed in original version, so it could be good to run the sequence one final time, or verify at least these three types.
+    	\item Run ``lookitup'' on the new column.
+    	% ConditionRaster5_0630_1021
+    	\item Use function ``nibblerast'' and ``condition88=True'' to get rid of questionable condition assignments.
+    	% ConditionRaster6_0630_1024
+    	\item Repeat the first 3 steps, if necessary.
+    \end{enumerate}
+    \item Burn in early as part of Age process (instructions in Age section)
+    % ConditionRaster7_0630_1152
+\end{enumerate}
+
+When these steps are complete, the resulting condition layer looks like this:
+\begin{verbatim}
+Code	Count_	Condition
+0		312508	Non-Seral
+10		469764	Early All
+20		790472	Mid Closed
+21		919861	Mid Moderate
+22		783077	Mid Open
+30		598140	Late Closed
+31		525793	Late Moderate
+32		147522	Late Open
+40		8		Early Aspen
+41		380		Mid Aspen
+42		1412	Mid Aspen Conifer
+43		92		Late Conifer Aspen
+\end{verbatim}
+
+\subsubsection{CSV File}
+The condition csv file contains three required columns: condition_id, condition_name, and condition_abr. The condition_id must match the raster grid values.
+
+%%%%%%%%%%%%%%%%%%
+\subsection{Age}
+Age represents the number of years since stand origin (i.e., the number of years since the last
+stand-replacing disturbance), not necessarily the age of the oldest plant individuals in the stand. In some circumstances the age since stand origin can greatly exceed the age of the oldest individual plants (e.g., old-growth stands). Age can be derived in any manner. Typically, however, it is estimated in the field by direct observation or estimated through a process of interpolation based on ecological and/or geographic distance to stands with known age. Age can be used to affect a variety of processes in RMLANDS, including succession transitions and susceptibility to disturbance. Age is a “dynamic” grid; cell values change over time during the simulation in response to disturbance and succession processes.
+
+Age values can be any positive whole number between 0-8190 (maximum limited for reasons of computational efficiency, although this can be changed easily), although any precision less than the length of the model time step (5  years) is inconsequential. A “no age” value (99998) is assigned to all non-vegetated and non-seral cover types.
+
+It is important to note that while age is potentially an important variable in RMLANDS——for example, it is typically the principal factor influencing succession transitions and can provide a basis for summarizing the range of variability in vegetation conditions––the “initial” age condition is a transient state that gets modified quickly during the simulation in response to disturbance and successsion processes. Therefore, the initial age structure of the landscape may be of little importance in a long-term simulation, as long as the model equilibration period (i.e., the period it takes the age structure of the landscape to stabilize given the disturbance regime) is properly accounted for.
+
+\subsection{Collecting and merging the data}
+Becky put together data sheets for the ``Modern Veg" plots so that they could be analyzed in ArcMap. These plots recorded only one age per plot; we do not know exactly how it was calculated. 
+
+A seasonal worked with Becky and Marilyn to transfer stand exam data from 1976-1992 ago into Excel files. Alan then used this data along with maps of the stand exam plots to generate manually a layer with the transcribed tree-level data. He also manually identified ``legacy'' trees that were unlikely to be representative of the stand. I then selected the oldest non-legacy tree from each plot as the representative tree for that plot and created a separate layer containing only these data points. I checked that all the plots in the original dataset were represented in the new one. Four were not, which was due to the fact that they contained only legacy trees. I also conferred with Alan about any questions I had with his designations of legacy trees. In many cases the determination was based on his personal knowledge of the stand and area of the plot.
+
+I calculated the age as of 2010 for both datasets and merged them. I then ran IDW interpolation to assign an age to each pixel in the landscape. We explored using interpolation by forest type, but we did not have enough data points for this to be effective, especially since many cover types were represented by 0-10 points across the entire landscape. We also acknowledge that the stand exam and modern veg plots do not constitute a true sample and were conducted almost exclusively in mid-mature and mature stands of commercially viable trees, thus skewing the results to some unquantifiable degree.
+
+\subsection{SourceCoverage} Because some of the EVeg data was from 2000, but other parts were from 2005, it was necessary to consider the year when incorporating disturbance factors from 2000 and later. These polygons needed not only for their age to be assigned to 0 for the year of their disturbance, but they also needed to be assigned to the condition class Early Development.
+
+\subsection{Known Past Disturbance}
+
+\subsubsection{FACTS} I worked with Alan to identify Forest Activity Tracking System (FACTS) codes that identified stand-replacing disturbance (e.g. clearcutting, seed tree and shelterwood cuts) (see emails from July 22). He then ran a query on the FACTS database to extract polygons that underwent stand-replacing disturbance for the years ???? - 2000 and shared it with me (TNF\_RMLands\_21.gdb). I obtained FACTS polygons for 2000-2012 from the Region 5 website. I calculated the age in 2010 based on difference between the date of disturbance (defined as Date Completed, or if that was absent, then Date Accomplished) and the year 2010 and stored it in a new field. I then converted the polygon layer to raster based on the new age field. In cases of overlapping polygons, the youngest age was prioritized.
+\paragraph{FACTS Codes}
+\begin{itemize}
+\item 4110 Clearcutting
+\item 1180 Fuel Break
+\item 4242 Harvest Without Restocking
+\item 4111 Patch Clearcut (EA/RH/FH)
+\item 4115 Patch Clearcut (w/leave trees) (EA/RH/FH)
+\item 4270 Permanent Land Clearing
+\item 4140 Removal Cut
+\item 4113 Stand Clearcut (EA/RH/FH)
+\item 4114 Stand clearcutting - Salvage Mortality
+\item 4117 Stand Clearcut (w/leave trees) (EA/RH/FH)
+\item 6130 Wildlife Habitat Create openings
+\item 6104 Wildlife Habitat Regeneration cut
+\item 4420 Reforestation Need Caused by Fire
+\item 4403 Reforestation Need Caused by Insect or Disease Agent
+\item 4132 Seed-tree Seed Cut
+\item 4142 Seed-tree Final Cut (EA/NRH/FH)
+\item 4121 Shelterwood Preparatory Cut (EA/RH/NFR)
+\item 4131 Shelterwood Establishment Cut (with or without leave trees) (EA/RH/NFR)
+\item 4112 Strip Clearcutting (EA/RH/FH)
+\end{itemize}
+
+\subsubsection{Fire} Detailed in next section.
+
+\subsubsection{Creating Age Rasters} Point data layer exists called ``Age\_Merge\_0807\_1153'' (located in ScratchRaster8.gdb), which includes point data from compartments (digitized from old sheets by seasonal and Alan) as well as ecoplots provided by Estes. Ages are all converted to be ``as of 2010''. Running the ``ageprocess'' function on this layer yields a raster with interpolated ages for each cell, rounded to the nearest 5 years. The next step is to merge this layer with other estimates of age based on disturbance history.
+%AgeRaster1
+To process disturbance history data (Veg Burn Severity, FACTS pre- and post-2002):
+\begin{enumerate}
+	\item Clip polygon layer to buffered project area using Clip Tool in ArcMap.
+	\item Select all rows with positive ages from (FACTS layer 2002-2012), and export to new layer.
+	%RML_FACTS_thru2002_Clip, R5_FACTS_to2010, VegBurnSeverity_Clip
+	\item Run ``disthistory'' function in FUNage.py if Age_2010 not calculated, or ``genpolytoraster'' function in FUNpolytoraster.py if Age_2010 already calculated. 
+	%Age_FACTSold1_0630_0833, Age_FACTSnew1_0630_0835, Age_Fire1_0630_0905
+	\item Run ``roundto5'' function in FUNage.py to round Age values to nearest 5s place.
+	% v.2
+	\item Run ``background'' function in FUNpolytoraster.py to add 99999 to nodata area.
+	% v.3
+	\item Use Cell Statistics tool in ArcMap to find minimum of the known disturbances. The interpolated ages are less reliable than these, so they are not included at this step.
+	% Age_Disturb_0630_0923
+	\item Use ``burnage'' function in FUNage.py to burn in disturbance-based ages into general age raster. 
+	% AgeRaster2_0630_0929
+\end{enumerate}
+
+\subsubsection{Using Condition and Age to refine one another} The idea here is that, since the disturbance-based age calculations are thought to be more accurate than the EVeg ``early'' designations, where a cells' age and condition are in disagreement, the condition should be modified to reflect the age.
+
+%The first step is to combine the age based on disturbance layer, the condition raster, and the cover raster using ``combinerast'' in the FUNnibblerast script. 
+
+The first step is to combine the age, condition, and cover rasters using ``combinerast'' in the FUNnibblerast script. 
+
+%---------------
+%Initially, I tried to use the Add Join tool or right-click and select Join in Arc to join the output of the ``combinerast'' function (the cover code field) to the file ``earlyagelookuptable''[date].csv (most recently, 20140605) and its cover code field. Export layer to work geodatabase to make join permanent. Then use the ``parsecombage'' function in FUNage.py to find those cells that should be in the early condition based on their age and cover type. Then run ``lookitup'' from FUNnibblerast.py on the new Early field. However, this technique does not work because the Lookup tool cannot be used with joined tables.
+%---------------
+
+I wrote a new function to add new fields and copy over the data from the relevant joined fields. Run ``addjoindata'' and then be sure to remove the join after the function completes if that part fails. Then use the ``parsecombage'' function in FUNage.py to find those cells that should be in the early condition based on their age and cover type. 
+
+%---------------
+%At this point, in theory one could use the Lookup tool, either in Arc or via the ``lookitup'' function from FUNnibblerast.py on the new Early field. On my computer/installation of Arc, any attempt to do this resulted in a runtime error and ArcMap crashing, and my geodatabase being unreachable until I restarted Windows. However, since Early calculated successfully, I finally came up with an alternative strategy that works: simply use the Con tool in place of Lookup. 
+%---------------
+
+\paragraph{Workaround for crashing Lookup} Use Con tool in ArcMap. For a given row, if 'Early' = 1, return 1, else return 0. Then, use Con again. For a given row, if 'Early' = 2, return 2, else return value from first Con operation. 
+
+Finally, run ``burnearly'' from FUNage.py to update the Condition raster with Early condition assignments based on age.
+% ConditionRaster7_0630_1152
+
+*** Separately created: the agerasterlookup and earlyagerasterlookup csv files.
+
+\subsubsection{Adjust ages for cover types originally classified as chaparral} In this study, chaparral is a vegetation type associated with early seral conditions. Given enough time without disturbance, chaparral fields on the Forest will eventually succeed to a tree-dominated type. Cells originally classified as chapparal were overwritten by adjacent cover types, but since we know that they were chaparral, we are reasonably confident that their age falls within the predicted range for a given cover type in the early condition. We decided to assign cells originally classified as chaparral to the midpoint of their new cover type. The process is fairly straightforward:
+\begin{enumerate}
+	\item Run ``genpolytoraster'' for chaparral from FUNpolytoraster.py, using AYHR10 and chap=True. 
+	% Chaparral_0630_1203
+	\item Run ``combine_rast'' from FUNnibblerast.py with layer from previous step and current cover Raster layer.
+	% Combine_CovChap_0630_1213
+	\item Add field: 'Age', Long integer.
+	\item Run ``midages'' function from FUNage.py
+	\item Run ``lookitup'' function from FUNnibblerast.py
+	% Age_CHaparral_0630_1228
+	\item Run ``background'' function from FUNpolytoraster.py
+	\item In Raster Calculator: Con(combinedlayer < 100, combinedlayer, age layer)
+	% AgeRaster3_0630_1234
+\end{enumerate}
+
+\subsection{Age, Condition-Age} Use the Raster to ASCII tool in ArcMap on the Age, Cover, and Condition rasters.
+% As of 6/30/14, updated layers were AgeRaster3_0630_1234, ConditionRaster7_0630_1152, CoverRaster8_0529_1839
+% Update AgeRaster4_0710_1130, CoverRaster9_0625_1917, ConditionRaster8_0723_2149, CondAge_0710_1127
+
+\subsubsection{ipython} It is easier to run the next few sections of code using ipython and numpy in the terminal.
+\paragraph{} Open ``agefunctions_draft3.py'' from Tahoe\\Age. Run code to generate the Condition-Age layer:
+\begin{lstlisting}
+# set up
+
+import Image
+import numpy as np
+import csv
+import matplotlib.pyplot as plt
+
+
+# generate array from ascii file
+agearray = np.genfromtxt("agegrids_0630/age.txt", dtype = None, skip_header = 6)
+covarray = np.genfromtxt("agegrids_0630/cover.txt", dtype = None, skip_header = 6)
+condarray = np.genfromtxt("agegrids_0630/condition.txt", dtype = None, skip_header = 6)
+
+lookup = np.genfromtxt('agelookuptable20140708.csv', names=True, delimiter=',', dtype="S9,int,S9,int,int,int")
+
+# Revise ages to fit allowed values
+
+for row in lookup:
+    cov = row['CoverCode']
+    cond = row['ConditionCode']
+    minage = row['MinAge']
+    maxage = row['MaxAge']
+    covcond_combo = (covarray == cov) & (condarray == cond) & (agearray >= 0)
+    ages = agearray[covcond_combo]
+    ages_clip = np.clip(ages, minage, maxage)
+    np.place(agearray, covcond_combo, ages_clip)
+    print "writing " + row['Cover'] + " " + row['Condition'] + " to array."
+    # make sure header info below matches exported ascii files
+    myheader = '''ncols         2910
+nrows         2244
+xllcorner     643616.208
+yllcorner     4347856.558
+cellsize      30
+NODATA_value  -9999'''
+np.savetxt("agegrids_0630/revised_ages_0710_1119.txt", agearray, fmt='%d', header=myheader, comments = '')
+
+# Create Condition-Age
+# Condition-Age is the # of years in that condition class
+# We decided to make everything the youngest it could be, so this function needs to take the current age
+# and subtract the min age. Thus if a pixel is LPN MDC and 50 years old, and the minimum age for MDC is 10,
+# then the condition-age will be 40. 
+
+revisedagearray = np.genfromtxt("agegrids_0630/revised_ages_0710_1119.txt", dtype = None, skip_header = 6)
+
+for row in lookup:
+    cov = row['CoverCode']
+    cond = row['ConditionCode']
+    minage = row['MinAge']
+    if minage == 99998:
+        continue 
+    covcond_combo = (covarray == cov) & (condarray == cond)
+    ages = revisedagearray[covcond_combo]
+    condages = ages - minage
+    np.place(revisedagearray, covcond_combo, condages)
+    print "writing " + row['Cover'] + " " + row['Condition'] + " to array."
+
+    myheader = '''ncols         2910
+nrows         2244
+xllcorner     643616.208
+yllcorner     4347856.558
+cellsize      30
+NODATA_value  -9999'''
+np.savetxt("agegrids_0630/condage_0710_1124.txt", revisedagearray, fmt='%d', header=myheader, comments = '')
+
+\end{lstlisting}
+
+\paragraph{} Import ASCII files for age (the ``revised ages'' file) and condition-age back into ArcGIS using ASCII to Raster tool (integer raster). Failure could be do to an incorrect header - check this. Use Define Projection to set NAD 83 Zone 10N. Unfortunately, this the above steps don't seem to preserve the integrity of the cells that should be 99998. 
+
+
+This step creates the final age raster, and the condition-age raster.
+% CondAge_0708_2211, AgeRaster4_0708_2214
+
+\subsubsection{CSV Files} Neither the age nor the condition-age rasters require an associated csv file.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Topographic Position Index}
+The TPI is created using two scripts within Jeff Evans' Geomorphology and Gradient Metrics toolbox (available from http://evansmurphy.wix.com/evansspatial#!arcgis-gradient-metrics-toolbox/crro).
+
+\paragraph{Slope Position} First create the slope position raster. In the script dialog, use the clipped Lattice_Clip30m layer for the DEM. The Analysis Window settings are a circle with a radius of 40 cells. The Analysis Extent is also the default. Environmental Settings are the standard for this project. The 40 cell option was chosen to reduce noise in the output, and because it was used in earlier work on TPI through a Jenness tool (so somewhat abitrarily). High values for this mean upper slopes and ridges, while low values indicate lower slopes and valley bottoms.
+
+% mean: -0.02621866574447391
+% sd: 64.59066378564846
+
+\paragraph{Heat Load Index} Next, use the heat load index tool. In the script dialog, again use the Lattice_Clip30m layer. The approximate central latitude (decimal degrees) of DEM was found by calculating the center in meters from the Source-Extent property (730916.208  + 643616.208)/2 = 687266.208). By an eyeball estimate and changing the map document display to decimal degrees, I found the central latitude of the project area to be 39.55143497516186. Standard Environmental Settings were used. High values are south and west facing slopes, while low values are north and east facing slopes.
+% mean: 0.8005533611277584
+% sd: 0.1507294490444819
+
+\paragraph{Combining Slope Position and Heat Load} First, calculate the z-score for each raster using Raster Calculator. Next, rescale to -300 to 300. Last, clip to buffered project area.
+\begin{lstlisting}
+Int((``HeatLoad_ZScore'' + ``SlopePosition_ZScore'') * 100)
+Con(``HeatSlope'' < -300, -300, Con(``HeatSlope'' > 300, 300, ``HeatSlope''))
+Con(``CoreBuffer'' > 0, ``HeatSlope'')
+\end{lstlisting}
+
+Our topographic position index combines slope position with heat load (itself based on aspect and slope). High values for TPI represent locations on upper slopes, tending toward south and west-facing aspects, and are relatively steep. Low values represent locations in valley bottoms, tending toward north and east-facing aspects, and are more gentle in slope. Values around zero represent locations tending towards the center of these extremes. We use TPI to adjust vegetation susceptibility and mortality because we expect susceptibility and mortality to be higher when TPI is high.
+
+
+\subsubsection{CSV File} TPI does not require a csv file.
+
+%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Elevation} 
+Elevation represents the height above sea level in meters. Elevation is typically derived from an existing digital elevation model (DEM). Elevation can be used to affect a variety of processes in RMLANDS, including succession transitions and susceptibility to disturbance. Elevation is a “static” grid; cell values remain constant over time. All cells within the project boundary must contain a real value; there can be no missing data (or nodata) cells. 
+
+Use the Lattice_Clip layer provided by the Tahoe National Forest to create the elevation input grid. Round the values using Raster Calculator.
+\begin{lstlisting}
+Int("Elevation Layer" + 0.5)
+\end{lstlisting}
+
+\paragraph{CSV File} Not required.
+
+%%%%%%%%%%%%%%%%%%
+\subsection{Slope} 
+Slope represents the steepness of a cell as measured in percent. Slope is derived from elevation. Slope can be used to affect a variety of processes in RMLANDS, including succession transitions, disturbance severity and eligibility for various vegetation treatments. Slope is a “static” grid; cell values remain constant over time. All cells within the project boundary must contain a real value; there can be no missing data (or nodata) cells. 
+
+Create the slope layer (percent rise) using the Slope tool in ArcGIS, and using the DEM as the input layer. Then convert to a truncated set of integers (1-126) using raster calculator.
+\begin{lstlisting}
+#Round slope values to whole numbers
+#Reclass slope values \textgreater 126 to 126
+Con(Int("Slope Layer" + 0.5) > 126, 126, Int("Slope Layer" + 0.5))
+\end{lstlisting}
+
+\paragraph{CSV File} Not required.
+
+%%%%%%%%%%%%%%%%%%%%
+\subsection{Aspect} Aspect represents the direction that a cell faces. Aspect is derived from elevation. Aspect can be used to affect a variety of processes in RMLANDS, including succession transitions and disturbance susceptibility and severity. Aspect is a “static” grid; cell values remain constant over time. Grid values represent categorical values assigned to the 8 cardinal directions, plus a value for flat areas with no aspect. All cells within the project boundary must contain a real value; there can be no missing data (or nodata) cells. Aspect must be defined as described below.
+
+Create the aspect layer using the Aspect tool in ArcGIS, and using the DEM as the input layer. Then convert to categorical data from continuous data using the following script within Raster Calculator:
+\lstset{language=SQL}
+\begin{lstlisting}
+Con('Aspect' == (-1), 9, Con(((0 <= 'Aspect') & ('Aspect' < 22.5)), 1, Con(((22.5 <= 'Aspect') & ('Aspect' < 67.5)), 2, Con(((67.5 <= 'Aspect') & ('Aspect' < 112.5)), 3, Con(((112.5 <= 'Aspect') & ('Aspect' < 157.5)), 4, Con(((157.5 <= 'Aspect') & ('Aspect' < 202.5)), 5, Con(((202.5 <= 'Aspect') & ('Aspect' < 247.5)), 6, Con(((247.5 <= 'Aspect') & ('Aspect' < 292.5)), 7, Con(((292.5 <= 'Aspect') & ('Aspect' < 337.5)), 8, Con(((337.5 <= 'Aspect') & ('Aspect' <= 360)), 1, 99999))))))))))
+1 N
+2 NE  
+3 E 
+4 SE
+5 S 
+6 SW 
+7 W 
+8 NW 
+9 Flat 
+\end{lstlisting} "Aspect1_0711_1048"
+
+\paragraph{CSV File} The aspect csv file contains three required columns: aspect_id, aspect_name, and aspect_abr. The aspect_id must match the raster grid values.
+
+%%%%%%%%%%%%%%%%%%%%
+\subsection{Streams} 
+
+Streams represents aquatic communities classified as small, medium or large based on
+stream order. Streams can be derived in any manner. Typically, however, it is created from a line coverage containing hydrography data, including an attribute for stream size or order, by buffering lines, if necessary to account for the width of large streams (if they exceed the width of the cell size), and then converting to a grid based on the stream size attribute. Streams can be used to affect disturbance spread in RMLANDS; i.e., streams may function as an impediment to spread. In addition, streams can function as logical vegetation treatment unit boundaries. 
+
+It is extremely important that the rasterization process employ the orthogonal neighbor rule when converting a line to a string of like-valued cells. Specifically, the final grid should contain stream cells that connect along a cell side (i.e., orthogonally) as opposed to diagonally. The diagonal neighbors, while touching, will not provide an impediment to disturbance spread (which happens diagonally as well as orthogonally). In addition, streams do not have to be in a contiguous network (i.e., no breaks in the streams) as long as the implications in terms of disturbance spread and/or logical treatment boundaries are acceptable. 
+
+Streams is a “static” grid; cell values remain constant over time. Note, streams can also be integrated into the cover type classification scheme and represented in the cover grid depending on the application. However, in the current version of RMLANDS it is necessary to include a separate streams grid regardless of whether streams are integrated into the cover grid or not. Grid values represent categorical values assigned to the three stream size classes, plus a value for background. All non-stream cells within the project boundary must be assigned a background value (99999). NODATA is reserved for cells outside the project boundary. 
+
+The original streams layer was a polyline vector format, delivered in ''TNF_RMLands_4.gdb.'' Use the Polyline to Raster tool in Arc to convert, assigning ''StrOrder_Grp'' to Value field, and ''Maximum_Length'' to cell assignment type, with standard environmental settings. Next, apply ''background'' function from  FUNpolytoraster.py. Then use Reclassify to ensure raster value definitions match requirements below:
+\begin{lstlisting}
+1 large streams
+2 medium streams 
+3 small streams 
+99999 background 
+\end{lstlisting}
+
+\paragraph{CSV File} The streams csv file contains three required columns: streams_id, streams_name, and streams_abr. The streams_id must match the raster grid values.
+
+\subsection{Roads} 
+Roads represents all transportation corridors classified as small, medium or large based on road size and/or intensity of use. Roads can be derived in any manner. Typically, however, it is created from a line coverage containing an attribute for road size and/or intensity of use, by buffering lines, if necessary to account for the width of large roads (if they exceed the width of the cell size), and then converting to a grid based on the road size and/or intensity of use attribute. Roads can be used to affect disturbance spread in RMLANDS; i.e., roads can function as an impediment to spread. In addition, roads can function as logical vegetation treatment unit boundaries. In addition, road proximity - which is derived from roads - can be used to constrain and/or prioritize areas for vegetation treatments. 
+
+It is extremely important that the rasterization process employ the orthogonal neighbor rule when converting a line to a string of like-valued cells. Specifically, the final grid should contain road cells that connect along a cell side (i.e., orthogonally) as opposed to diagonally. The diagonal neighbors, while touching, will not provide an impediment to disturbance spread (which happens diagonally as well as orthogonally). In addition, roads do not have to be in a contiguous network (i.e., no breaks in the roads) as long as the implications in terms of disturbance spread and/or logical treatment boundaries are understood and accepted. 
+
+Roads is a “static” grid; cell values remain constant over time. Note, roads can also be integrated into the cover type classification scheme and represented in the cover grid depending on the application. However, in the current version of RMLANDS it is necessary to include a separate roads grid regardless of whether road features are integrated into the cover grid or not.
+
+Grid values represent categorical values assigned to the three road size classes, plus a value for background. All non-road cells within the project boundary must be assigned a background value (99999). NODATA is reserved for cells outside the project boundary.
+
+\paragraph{Background} The original roads layer given to us by the Tahoe team did not include a mechanism to sort the roads by size. I discussed the use of roads in RMLands - they function primarily as a potential spread inhibitor (and end up functioning as habitat fragmenters). The Tahoe team considered the roads within the project area and their desire to maintain portability and determined that the project landscape only contained two levels of roads, small and medium. Large roads would be roads such as interstates, which do not cross the current landscape but are present nearby. They sent us an updated roads layer with all polylines attributed for road size in a geodatabase called 'TNF_RMLands_22. 
+
+\paragraph{Processing} Converted  polyline vector layer to raster. Value field is ``Rd_Cat.'', cell assignment is ``Maximum_Length,'' and standard environmental settings apply. Next, apply ``background'' function from  FUNpolytoraster.py. Next, use Raster Calculator to reassign values and add in background: 
+\begin{lstlisting}
+Con("roads"==1, 3, "roads")
+1 large roads
+2 medium roads 
+3 small roads 
+99999 background 
+\end{lstlisting}
+
+\paragraph{CSV File} The roads csv file contains three required columns: roads_id, roadsroads_name, and roads_abr. The roads_id must match the raster grid values.
+
+\subsection{Buffer/Core} 
+Buffer represents the “core” project area and a user-specified “buffer” around the core area. The “core” area is the project area of interest (e.g., national forest), whereas the “buffer” is an arbitrarily-defined area around the core designed to eliminate the boundary (or edge) effect associated with disturbance spread (i.e., to allow disturbances to spread on to and off of the landscape without impediment). Without a buffer there is a substantial bias in the probability of disturbance for cells within a certain distance of the edge of the landscape because of the reduced likelihood that disturbances will spread to that location from outside the designated landscape. The width of the buffer can vary among applications, as well as around the perimeter of the core within an application, and is usually defined based on the size of the largest disturbance events being simulated. In practice, a 10-km buffer is generally sufficient to offset any boundary effects when simulating large wildfires and insect outbreaks. It is important to note that if a buffer grid is specified, then all other input grids must be classified within the full extent of the buffer area as well as the core. All succession and disturbance processes operate seamlessly across the buffer and core, and thus the presence of a buffer does not affect the simulation in any way. However, if a buffer is present, all statistic reporting is restricted to the behavior in the core only (excludes the buffer from consideration) and all output grids are clipped to the core. Buffer is a “static” grid; cell values remain constant over time.
+
+Grid values represent categorical values assigned to the two classes: buffer vs. core. All cells within the project boundary (core plus buffer) must contain a real value; i.e., there can be no missing data (or nodata) cells. NODATA is reserved for cells outside the project boundary.
+
+The original polygon layer for this was generated by creating at 10km buffer around the project area watersheds. It was then converted to raster using the same procedure as for other layers. The buffer and core are assigned raster values of 2 and 1, respectively, per the RMLands_spatial_data.pdf documentation.
+
+\subsection{Stage.csv} No input grid showing initial stages is needed; this information is stored in memory when the application is running. The csv file contains four required columns: stage_id, stage_name, stage_abr, condition_abr. Stages are typically Early, Mid and Late (as opposed to Open or Closed, which refer to canopy cover).
+
+
+\subsection{Last Steps} After all the layers are ready in ArcGIS, they must be exported as GeoTiff files to a folder containing all input gis data for use in RMLands. This folder must also contain the relevant csv files and disturbance and succession rule files.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Vegetation Treatment Layers}
+
+Several layers are used to construct the series of input layers that will affect vegetation treatments, and all except slope require some degree of geoprocessing.
+
+\subsection{WUI and PAC layers}
+
+\subsubsection{WUI} WUI Data was obtained separately from the Tahoe and Plumas National Forests. The Tahoe data was sent in a geodatabase titled 'WildlifeGI_DataPull_2014April_HRV_RMLands-1' and the Plumas data was sent in a geodatabase titled 'DataRequest_09June2014'. Use function ``genpolytoraster'' in FUNpolytoraster.py to convert them, using 'URB_TYPE' as the field. 
+
+The PNF File will generate raster values that do not match the Urb Type, so use the Reclassify tool in Arc to correct the raster. The Lookup tool cannot be used because 'URB_TYPE' contains string data, rather than integer. Next, combine them, keeping the minimum (most urbanized) value, using the Cell Statistics tool in Arc (minimum, standard Environment Settings). %Use the Reclassify tool to combine the urban core types, defense zone types, and threat zone (to values 1, 2, and 3, respectively). 
+Run the function ``background'' from FUNpolytoraster to add add this. Finally, clip to the buffered project area using function ``clippolys'' from FUNgentools.
+
+The WUI Classes are thus:
+\begin{lstlisting}
+1 	Urban Core with < 1 House Per 5 Acres 
+2 	Urban Core with >= 1 House Per 5 Acres 
+3 	Defense Zone
+4 	Threat Zone with Defense Zone 
+5 	Threat Zone without Defense Zone
+\end{lstlisting}
+
+\subsubsection{PAC} Spotted Owl and Goshawk P Activity Centers are critical to identify. Home Range Core Areas represent a buffer around the PAC, but do not affect treatment decisions. However, the PAC layer will be used in combination with other landscape layers to prioritize treatments. Again, separate layers exist for the Plumas and the Tahoe, so they must be processed. Also, the two species' PACS are mapped separately.
+
+The Tahoe data was sent in a geodatabase titled 'WildlifeGI_DataPull_2014April_HRV_RMLands-1' and the Plumas data was sent in a geodatabase titled 'DataRequest_09June2014'. Use function ``genpolytoraster'' in FUNpolytoraster.py to convert them, using 'SITE_STATUS' as the field for Tahoe data and 'SHAPE_STATUS' as the field for the Plumas data. Next, use the Cell Statistics tool in Arc and load all four PAC rasters into it, and calculate the mean. This creates a raster with all PACs represented with a value of 1. Finally, run the function ``background'' from FUNpolytoraster to add add this.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Creating Treatment Classes}
+
+\subsubsection{Treatment Class: Slope} Our goal is for 80\% of treatments to occur on slopes of less than 30\%. Using a 4-parameter logistic function, the slope layer is converted such that ***do I understand this?***. Use the ``log4param'' function in FUNlogistics.py on the slope layer.
+
+\subsubsection{Treatment Class: WUI + PAC} This includes all locations that are both in the WUI and in a PAC. First, use ``combine_rast'' from FUNnibblerast.py to merge the WUI and PAC rasters. Then run ``parse_wuipac'' from the same script. The resulting raster values are thus: %VTC_WUI_PAC1_0716_1311
+\begin{lstlisting}
+1 		Urban Core with < 1 House Per 5 Acres, No PAC
+2 		Urban Core with >= 1 House Per 5 Acres, No PAC 
+3 		Defense Zone, No PAC
+4 		Threat Zone with Defense Zone, No PAC 
+5 		Threat Zone without Defense Zone, No PAC
+6 		PAC Outside the WUI
+10 		Urban Core with < 1 House Per 5 Acres, With PAC
+20 		Urban Core with >= 1 House Per 5 Acres, With PAC 
+30 		Defense Zone, With PAC
+40 		Threat Zone with Defense Zone, With PAC 
+50 		Threat Zone without Defense Zone, With PAC
+99999 	Background
+\end{lstlisting}
+
+Finally, run ``lookitup'' (note, new field is 'Category'). Next, use Raster Calculator/Con to convert the areas that are both WUI and PAC (10-50): 
+\begin{lstlisting}
+Con((("VTC_WUI_PAC1_0716_1311" >= 10) & ("VTC_WUI_PAC1_0716_1311" <= 50)),1)
+\end{lstlisting}
+
+\subsubsection{Treatment Class: nonWUI PACs} PACs outside the WUI were classified via earlier geoprocessing to a value of 6 in the VTC_WUI_PAC layer. To get it alone, use Con to convert 6s to 1 and the rest to 99999.
+
+\subsubsection{Treatment Class: WUI Threat Zone, excluding PACs} This class was classified via earlier geoprocessing to a value of 4 and 5 in the VTC_WUI_PAC layer. To get it alone, use Con to convert 4s and 5s to 1 and the rest to 99999.
+
+\subsubsection{Treatment Class: WUI Defense Zone, exlcuding PACs} This class was classified via earlier geoprocessing to a value of 3 in the VTC_WUI_PAC layer. To get it alone, use Con to convert 3s to 1 and the rest to 99999.
+
+\subsubsection{Treatment Class: WUI Urban Core Zone, excluding PACs} This class was classified via earlier geoprocessing to a value of 1 and 2 in the VTC_WUI_PAC layer. To get it alone, use Con to convert 1s and 2s to 1 and the rest to 99999.
+
+\subsubsection{Treatment Class: nonWUI, nonPAC} This group consists of everything classified to 99999 after running the ``parse_wuipac'' function. Use Con to change the 99999 to 1 and everything else to 99999.
+
+\subsubsection{Treatment Class: Riparian Conservation Areas (RCAs)} The riparian zone for treatment purposes is the land within 100 ft of perennial streams or 75 ft of intermittent streams. The original streams layer provided by the Tahoe included stream rankings of large, medium, and small. However, this ranking was not based on a clear definition of perennial or intermittent.
+
+The Sierra Nevada Framework ROD says that Riparian Conservation Areas are 300 ft on each side of perennial streams, and 150 feet on each side of intermittent and ephemeral streams.
+
+GIS Specialist Rolf sent a more detailed streams layer (``TahoeNHDFlowline_HydroClass_20140505''). It includes the following hydro types: Artificial Path, Ephemeral, Intermittent, and Perennial. Based on a visual assessment, the Artifical Path is associated with major areas of water and reservoirs. For this reason, I am keeping it, and it will be buffered as if it were a perennial stream.
+
+Use the ROD framework until a chance to speak with Tahoe folks is available.
+
+Use ``genpolytoraster,'' flowlinePA=True and field ``FCode'' to convert the flowline to a raster dataset. Repeat for flowlineIE=True. The process may deliver an error but it should succeed. Use the Expand tool in Arc to add a buffer to the streams. Use 3 pixels for perennial streams and 1 pixel for intermittent (technically this is 30 m rather than 45 m, but the streams in question are probably not 30m wide, which is the size of each cell and thus the smallest possible stream width. Next both riparian rasters need to be combined to form the generic RCA raster. 
+
+Use the Cell Statistics tool in Arc to combine the two RCA rasters. The stat in question is not important; I used minimum. The value will be changed to 1 later. Then run ``background'' from FUNpolytoraster. Last, do a Con statement in Raster Calculator to turn the RCAs to 1 and eliminate the 99999 that should be NoData: Con(``CoreBuffer'' > 0, Con(``RCA'' < 99999, 1, ``CoreBuffer''))
+
+% Also made layer for no ephemeral.
+
+%%%%%% DRAFT %%%%%%%%%
+Take NHD Flowline dataset. Buffer 100 ft of perennial or artificial. Buffer 75 ft of intermittent. Union the two. Then convert to raster with the genpolytoraster function. For the mean, convert raster to appropriate decimal. For the geometric mean, convert background to 1 using the ``vegbackground'' function.
+
+
+\subsubsection{Treatment Class: TPI-Suitability and TPI-susceptibility}
+Use function ``log4param'' in FUNlogistics.py to modify the TPI layer. The TPI layer to be modified is EITHER??? the original float layer OR the rescaled integer layer.
+
+% note on TPI-suit and TPI-susc
+
+\subsubsection{Treatment Class: Roadless} No vegetation treatments are allowed in inventoried roadless areas. Use ``genpolytoraster'' in FUNpolytoraster. Then run ``background'' and use Raster Calculator to clip to the buffered project area.
+
+\subsubsection{Treatment Class: Road Proximity} Roads for this project come from a different source than for barriers to fire spread. They need to be processed before creating the road proximity raster. Data for the Tahoe NF comes from TnfTransportation.gdb/Roads and data for the Plumas NF comes from PnfTransportation.gdb/Roads. Both polyline layers can be converted to raster with ``genpolytoraster'' in FUNpolytoraster. They can then be combined with the rasterized roads (initial version, before adding background) using the Cell Statistics tool, with Minimum. Then use the Euclidean Distance tool in Arc to calculate distance-from-road to each cell. %Last, integerize using Raster Calculator and clip to buffered project area.
+
+% Also do this for the old road prox
+
+\subsection{Modifying treatment class layers - creating probability surfaces}
+The slope layer is the same regardless of treatment type. The WUI + PAC treatment class must be converted to 0.6, 0.4, and 0.2. Easiest to do in Raster Calculator since conversion from integer to floating point raster is necessary. Can also do with batch Con tool.
+
+*** Wait, is it not necessary for any of these to have background?
+
+
+
+
+
+
+
+

@@ -1,0 +1,145 @@
+5_Results
+
+TPI ~ Cover-Condition Class
+Set up a mixed effects model
+
+Model 1: simple average
+Summary:
+Linear mixed model fit by REML ['lmerMod']
+Formula: ccavg ~ tpi + (1 + tpi | cover)
+   Data: ccavg.r3.samp
+
+REML criterion at convergence: 63631.6
+
+Scaled residuals: 
+    Min      1Q  Median      3Q     Max 
+-5.6083 -0.6450 -0.0352  0.5624  8.4498 
+
+Random effects:
+ Groups   Name        Variance  Std.Dev. Corr
+ cover    (Intercept) 4.083e+02 20.20690     
+          tpi         2.395e-04  0.01548 0.30
+ Residual             3.339e+01  5.77871     
+Number of obs: 10000, groups:  cover, 18
+
+Fixed effects:
+             Estimate Std. Error t value
+(Intercept) 52.383401   4.793445  10.928
+tpi         -0.004390   0.004287  -1.024
+
+Correlation of Fixed Effects:
+    (Intr)
+tpi 0.267 
+
+Model 2: Average, then smoothed
+Linear mixed model fit by REML ['lmerMod']
+Formula: ccavg ~ tpi + (1 + tpi | cover)
+   Data: ccavg.r3.50Gsmooth.samp
+
+REML criterion at convergence: 70395
+
+Scaled residuals: 
+    Min      1Q  Median      3Q     Max 
+-5.3275 -0.6201  0.0368  0.6321  5.0580 
+
+Random effects:
+ Groups   Name        Variance  Std.Dev. Corr
+ cover    (Intercept) 4.242e+02 20.59704     
+          tpi         8.033e-04  0.02834 0.69
+ Residual             6.546e+01  8.09084     
+Number of obs: 10000, groups:  cover, 24
+
+Fixed effects:
+             Estimate Std. Error t value
+(Intercept) 42.154525   4.246575   9.927
+tpi         -0.016624   0.006414  -2.592
+
+Correlation of Fixed Effects:
+    (Intr)
+tpi 0.623 
+
+Model 3: rescaled data (mmu=9cells), averaged
+Linear mixed model fit by REML ['lmerMod']
+Formula: ccavg ~ tpi + (1 + tpi | cover)
+   Data: ccavg.r3res.samp
+
+REML criterion at convergence: 63631.6
+
+Scaled residuals: 
+    Min      1Q  Median      3Q     Max 
+-5.6083 -0.6450 -0.0352  0.5624  8.4498 
+
+Random effects:
+ Groups   Name        Variance  Std.Dev. Corr
+ cover    (Intercept) 4.083e+02 20.20690     
+          tpi         2.395e-04  0.01548 0.30
+ Residual             3.339e+01  5.77871     
+Number of obs: 10000, groups:  cover, 18
+
+Fixed effects:
+             Estimate Std. Error t value
+(Intercept) 52.383401   4.793445  10.928
+tpi         -0.004390   0.004287  -1.024
+
+Correlation of Fixed Effects:
+    (Intr)
+tpi 0.267 
+
+Model 4: rescaled data, averaged, smoothed
+Linear mixed model fit by REML ['lmerMod']
+Formula: ccavg ~ tpi + (1 + tpi | cover)
+   Data: ccavg.r3res.50Gsmooth.samp
+
+REML criterion at convergence: 70673.9
+
+Scaled residuals: 
+    Min      1Q  Median      3Q     Max 
+-4.9604 -0.6286  0.0253  0.6315  4.5405 
+
+Random effects:
+ Groups   Name        Variance  Std.Dev. Corr
+ cover    (Intercept) 4.018e+02 20.04615     
+          tpi         5.085e-04  0.02255 0.42
+ Residual             6.734e+01  8.20634     
+Number of obs: 10000, groups:  cover, 24
+
+Fixed effects:
+             Estimate Std. Error t value
+(Intercept) 43.467772   4.148409   10.48
+tpi         -0.016290   0.005393   -3.02
+
+Correlation of Fixed Effects:
+    (Intr)
+tpi 0.358 
+
+Fixed part: CCAvg = 52.383401 + -0.004390 * TPI
+
+
+Model 1 again
+coef(mml2)
+cover
+   (Intercept)          tpi
+1    10.412193 -0.046749933
+2    17.787431 -0.009544985
+4    23.344026 -0.012926036
+5    48.569092 -0.005406355
+6    55.364118 -0.004061407
+8    17.562060 -0.047014647
+9    72.040255  0.010320498
+10   66.271438  0.016623272
+11   69.040060  0.006238756
+12   36.814325 -0.017515037
+13   54.677819  0.005679818
+14   52.695905 -0.007623984
+15   25.402781 -0.008787096
+17   61.098603 -0.010131446
+18   43.524658 -0.020472380
+19   39.268694 -0.023137230
+21   70.064830 -0.007403409
+23   55.829222 -0.008191553
+24   51.672575 -0.011764134
+25   34.323317 -0.016363417
+26   33.207991 -0.021352930
+27   13.322267 -0.032360411
+28    3.064592 -0.115265932
+29   56.350338 -0.011774801

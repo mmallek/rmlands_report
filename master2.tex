@@ -1,0 +1,62 @@
+\documentclass{book}
+\usepackage[left=1in,right=1in,top=1in,bottom=1in]{geometry}
+\usepackage{latexsym}
+\usepackage{listings}
+\lstset{breaklines=true, language=Python, showspaces=false, showstringspaces=false}
+\usepackage{wrapfig,subfig,graphicx}
+\usepackage{textcomp}
+
+\begin{document}
+
+%\author{Maritza Mallek}
+\title{Modeling Historical Range of Variability and Future Land Management Scenarios in the Yuba River Watershed, Tahoe National Forest}
+\date{December 2014}
+
+\section{Outline}
+\subsection{Spatial Data Preparation}
+Xeric/Mesic Gradient preparation\\
+YHR Type Selection\\
+Eveg Layer Selection\\
+Scale and Extent\\
+Scripts and tools used for spatial data prep\\
+some of this will be redundant with the rmlands spatial data pdf\\
+Age
+
+\subsection{landcover type descriptions and models}
+Primary sources for text (e.g. landfire, whr, feis, Cal veg book)\\
+Primary sources for model values (e.g. landfire, expert opinion)\\
+generation of succession probabilities\\
+
+\subsection{general notes}
+may be worth it to include general description of how and when we involved FS folks\\
+District vs. Ecology Group vs. Hugh vs. other advisors\\
+
+\subsection{original goal list}
+
+The original set of work to be done was:
+\begin{enumerate}
+\item{Create state transition models for each Yuba River cover type. Hopefully they can be based largely on the LandFire cover types.}
+\item{Analyze existing cover types and LandFire cover types}
+\item{Evaluate the quality of the data: for example, conduct a compositional analysis in GIS and determine the relative similarity between the EVeg, PNV, and Wieslander vegetation layers.}
+\item{Do a lit review to collate data on the pertinent disturbance regimes.}
+\end{enumerate}
+
+%\frontmatter 
+%\tableofcontents 
+\include{preface} 
+
+\mainmatter 
+%\include{1_InputLayerPrep} 
+\include{new2_Methods} 
+%\include{3_Geoprocessing} 
+%\include{4_RMLandsParameterDevelopment} 
+%\include{5_ModelCalibration} 
+
+\backmatter 
+\include{glossary} 
+\include{notat} 
+\bibliographystyle{amsalpha} %The style you want to use for references. 
+\bibliography{mr,refs} %The files containing all the articles and books you ever referenced. 
+%\printindex %Make an index AUTOMATICALLY 
+
+\end{document} 
